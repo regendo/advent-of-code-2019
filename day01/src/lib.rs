@@ -6,14 +6,14 @@ use std::io;
 ///
 /// ## Spec
 /// ```
-/// # use day01::calc_fuel;
-/// assert_eq!(calc_fuel(12), 2);
-/// assert_eq!(calc_fuel(14), 2);
-/// assert_eq!(calc_fuel(1969), 654);
-/// assert_eq!(calc_fuel(100_756), 33_583);
-/// assert_eq!(calc_fuel(0), 0);
+/// # use day01::calc_basic_fuel;
+/// assert_eq!(calc_basic_fuel(12), 2);
+/// assert_eq!(calc_basic_fuel(14), 2);
+/// assert_eq!(calc_basic_fuel(1969), 654);
+/// assert_eq!(calc_basic_fuel(100_756), 33_583);
+/// assert_eq!(calc_basic_fuel(0), 0);
 /// ```
-pub fn calc_fuel(mass: i32) -> i32 {
+fn calc_basic_fuel(mass: i32) -> i32 {
 	max(0, mass / 3 - 2)
 }
 
@@ -27,25 +27,36 @@ pub fn read_masses(file: &str) -> io::Result<Vec<i32>> {
 	Ok(mapped)
 }
 
-/// Calculate the additional fuel needed to lift an amount of fuel. (And to lift that additional fuel, and so on.)
+/// Calculate the total fuel required to lift both a mass and its fuel into orbit.
 ///
 /// ## Spec
 ///
 /// ```
-/// # use day01::calc_additional_fuel;
-/// assert_eq!(calc_additional_fuel(2), 0);
-/// assert_eq!(calc_additional_fuel(654), 966 - 654);
-/// assert_eq!(calc_additional_fuel(33_583), 50_346 - 33_583);
+/// # use day01::calc_total_fuel;
+/// assert_eq!(calc_total_fuel(14), 2);
+/// assert_eq!(calc_total_fuel(1969), 966);
+/// assert_eq!(calc_total_fuel(100_756), 50_346);
 /// ```
 ///
-pub fn calc_additional_fuel(base_fuel: i32) -> i32 {
-	let mut total_fuel = 0;
-	let mut additional_fuel = calc_fuel(base_fuel);
+fn calc_total_fuel(mass: i32) -> i32 {
+	let mut total_fuel = calc_basic_fuel(mass);
+	let mut additional_fuel = calc_basic_fuel(total_fuel);
 
 	while additional_fuel > 0 {
 		total_fuel += additional_fuel;
-		additional_fuel = calc_fuel(additional_fuel);
+		additional_fuel = calc_basic_fuel(additional_fuel);
 	}
 
 	total_fuel
+}
+
+/// Calculate the amount of fuel needed to lift all modules into orbit -- ignoring the fuel's own weight.
+/// Consider using [total_spaceship_fuel](#total_spaceship_fuel) instead.
+pub fn total_spaceship_fuel_naive(modules: &[i32]) -> i32 {
+	modules.iter().map(|m| calc_basic_fuel(*m)).sum()
+}
+
+/// Calculate the amount of fuel needed to lift all modules into orbit, and to lift the fuel.
+pub fn total_spaceship_fuel(modules: &[i32]) -> i32 {
+	modules.iter().map(|m| calc_total_fuel(*m)).sum()
 }
