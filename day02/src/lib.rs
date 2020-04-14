@@ -1,3 +1,5 @@
+use std::fs;
+
 enum Opcode {
 	Add,
 	Mult,
@@ -19,6 +21,16 @@ enum OpcodeError {
 	UnknownOpcode(i32),
 	TooFewParameters { expected: i32, actual: i32 },
 	InvalidIndex(i32),
+}
+
+pub fn load_program(file_path: &str) -> Result<Vec<i32>, std::io::Error> {
+	let file = fs::read_to_string(file_path)?;
+	let program = file
+		.trim()
+		.split(',')
+		.map(|s| s.parse::<i32>().unwrap())
+		.collect();
+	Ok(program)
 }
 
 fn execute_program(program: &mut [i32]) -> Result<(), OpcodeError> {
