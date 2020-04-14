@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	println!(
 		"Actual total fuel required, including fuel for the fuel: {} liters",
-		calc_total_fuel(base_fuel)
+		base_fuel + calc_additional_fuel(base_fuel)
 	);
 	Ok(())
 }
