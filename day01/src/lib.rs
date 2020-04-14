@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::fs;
 use std::io;
 
@@ -13,7 +14,7 @@ use std::io;
 /// assert_eq!(calc_fuel(0), 0);
 /// ```
 pub fn calc_fuel(mass: i32) -> i32 {
-	mass / 3 - 2
+	max(0, mass / 3 - 2)
 }
 
 /// Read the individual modules' masses from an input file.
