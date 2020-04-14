@@ -13,6 +13,7 @@ fn calc_fuel(mass: i32) -> i32 {
 /// ## Spec
 ///
 /// ```
+/// # use day02::calc_total_fuel;
 /// assert_eq!(calc_total_fuel(14), 2);
 /// assert_eq!(calc_total_fuel(1969), 966);
 /// assert_eq!(calc_total_fuel(100_756), 50_346);
