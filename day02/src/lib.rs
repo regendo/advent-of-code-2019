@@ -71,7 +71,22 @@ pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
 pub fn execute_program(program: &mut [usize]) -> Result<(), OpcodeError> {
-	// TODO
+	let mut idx: usize = 0;
+
+	while let Ok(code) = Opcode::new(program[idx]) {
+		match code {
+			Opcode::Add => {
+				add(program, idx);
+				idx += 4;
+			}
+			Opcode::Mult => {
+				mult(program, idx);
+				idx += 4;
+			}
+			Opcode::Halt => return Ok(()),
+		}
+	}
+
 	Ok(())
 }
 
