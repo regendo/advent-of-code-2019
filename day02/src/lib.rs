@@ -87,7 +87,8 @@ pub fn execute_program(program: &mut [usize]) -> Result<(), OpcodeError> {
 		}
 	}
 
-	Ok(())
+	// This feels awkward but `while let` doesn't have an else clause.
+	Err(OpcodeError::UnknownOpcode(program[idx]))
 }
 
 /// Indirect Addition.
