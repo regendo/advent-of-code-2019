@@ -1,4 +1,8 @@
-enum Direction {
+use std::error::Error;
+use std::fs;
+
+#[derive(Debug)]
+pub enum Direction {
 	Left(u32),
 	Right(u32),
 	Up(u32),
@@ -39,4 +43,26 @@ impl Point {
 
 		traveled
 	}
+}
+
+pub fn read_directions(path: &str) -> Result<(Vec<Direction>, Vec<Direction>), Box<dyn Error>> {
+	let mapper = |code: &str| -> Direction {
+		let distance = code[1..].parse::<u32>().unwrap();
+		// can't match on `code.starts_with(&str)` so here's this
+		match code.chars().next() {
+			Some('L') => Direction::Left(distance),
+			Some('R') => Direction::Right(distance),
+			Some('U') => Direction::Up(distance),
+			Some('D') => Direction::Down(distance),
+			_ => panic!("Unexpected code: {}", code),
+		}
+	};
+
+	let file = fs::read_to_string(path)?;
+	let mut inputs = file
+		.trim()
+		.lines()
+		.map(|l| l.split(',').map(mapper).collect::<Vec<Direction>>());
+
+	Ok((inputs.next().unwrap(), inputs.next().unwrap()))
 }
