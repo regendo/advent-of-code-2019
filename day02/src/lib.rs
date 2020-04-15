@@ -17,6 +17,7 @@ impl Opcode {
 	}
 }
 
+#[derive(Debug)]
 pub enum OpcodeError {
 	UnknownOpcode(usize),
 }
@@ -72,4 +73,40 @@ pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
 pub fn execute_program(program: &mut [usize]) -> Result<(), OpcodeError> {
 	// TODO
 	Ok(())
+}
+
+/// Indirect Addition.
+///
+/// Add the values referenced from positions `idx+1` and `idx+2`, and store them the position referenced at `idx+3`.
+///
+/// ## Examples
+///
+/// ```
+/// # use day02::add;
+/// let mut program = [3, 1, 0, 1, 2];
+/// add(&mut program, 1);
+/// assert_eq!(program, [3, 1, 4, 1, 2]);
+/// ```
+pub fn add(program: &mut [usize], idx: usize) {
+	let (adx, bdx, target_idx) = (program[idx + 1], program[idx + 2], program[idx + 3]);
+	let (a, b) = (program[adx], program[bdx]);
+	program[target_idx] = a + b;
+}
+
+/// Indirect Multiplication.
+///
+/// Multiply the values referenced from positions `idx+1` and `idx+2`, and store them the position referenced at `idx+3`.
+///
+/// ## Examples
+///
+/// ```
+/// # use day02::mult;
+/// let mut program = [3, 2, 0, 1, 2];
+/// mult(&mut program, 1);
+/// assert_eq!(program, [3, 2, 6, 1, 2]);
+/// ```
+pub fn mult(program: &mut [usize], idx: usize) {
+	let (adx, bdx, target_idx) = (program[idx + 1], program[idx + 2], program[idx + 3]);
+	let (a, b) = (program[adx], program[bdx]);
+	program[target_idx] = a * b;
 }
