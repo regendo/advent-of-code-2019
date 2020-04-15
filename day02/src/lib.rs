@@ -126,3 +126,9 @@ pub fn mult(program: &mut [usize], idx: usize) {
 	let (a, b) = (program[adx], program[bdx]);
 	program[target_idx] = a * b;
 }
+
+/// "[R]estore the [...] program [...] to the "1202 program alarm" state it had just before the last computer caught fire."
+pub fn restore_to_alarm_state(program: &mut [usize]) {
+	program[1] = 12;
+	program[2] = 2;
+}
