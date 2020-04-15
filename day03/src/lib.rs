@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
 
-#[derive(Debug)]
+type Line = HashSet<Point>;
+
+#[derive(Debug, Clone, Copy)]
 pub enum Direction {
 	Left(u32),
 	Right(u32),
@@ -9,6 +13,7 @@ pub enum Direction {
 	Down(u32),
 }
 
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 struct Point {
 	x: i32,
 	y: i32,
@@ -18,12 +23,12 @@ impl Point {
 	/// ["Manhattan Distance"](https://en.wikipedia.org/wiki/Taxicab_geometry) between two points.
 	///
 	/// Note that this distance is in absolute values and symmetrical.
-	fn distance_to(&self, other: &Point) -> i32 {
-		(self.x - other.x).abs() + (self.y - other.y).abs()
+	fn distance_to(self, other: Point) -> u32 {
+		((self.x - other.x).abs() + (self.y - other.y).abs()) as u32
 	}
 
 	/// Travel a distance from this point, returning all points traveled through.
-	fn travel(&self, direction: Direction) -> Vec<Point> {
+	fn travel(self, direction: Direction) -> Vec<Point> {
 		let distance = match direction {
 			Direction::Left(d) | Direction::Right(d) | Direction::Up(d) | Direction::Down(d) => d,
 		};
@@ -65,4 +70,45 @@ pub fn read_directions(path: &str) -> Result<(Vec<Direction>, Vec<Direction>), B
 		.map(|l| l.split(',').map(mapper).collect::<Vec<Direction>>());
 
 	Ok((inputs.next().unwrap(), inputs.next().unwrap()))
+}
+
+fn create_line(directions: &[Direction]) -> Line {
+	let mut line = Line::new();
+	let mut current_location = Point { x: 0, y: 0 };
+	// Inserting {0, 0} into our set might seem stupid because we'll filter it back out later
+	// but we can't prevent it from being there anyway as we might visit it again during our travels.
+	// So we might as well include it here to accurately present the line as every visited point.
+	line.insert(current_location);
+
+	for direction in directions {
+		let traveled = current_location.travel(*direction);
+		if let Some(destination) = traveled.last() {
+			// update current location if we traveled anywhere
+			// should be every time, but theoretically the travel distance could be 0
+			current_location = *destination;
+		}
+		line.extend(traveled);
+	}
+
+	line
+}
+
+fn find_intersection_distances(a: Line, b: Line) -> HashMap<Point, u32> {
+	let base = Point { x: 0, y: 0 };
+	let intersections = a.intersection(&b).filter(|p| **p != base);
+	let mut map = HashMap::new();
+
+	for point in intersections {
+		map.insert(*point, base.distance_to(*point));
+	}
+
+	map
+}
+
+fn find_nearest_intersection(intersections: HashMap<Point, u32>) -> Option<(Point, u32)> {
+	if let Some((p, d)) = intersections.iter().min_by_key(|(_, distance)| *distance) {
+		Some((*p, *d))
+	} else {
+		None
+	}
 }
