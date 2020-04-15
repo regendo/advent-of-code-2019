@@ -132,3 +132,27 @@ pub fn restore_to_alarm_state(program: &mut [usize]) {
 	program[1] = 12;
 	program[2] = 2;
 }
+
+pub struct Inputs {
+	pub noun: usize,
+	pub verb: usize,
+}
+
+/// Attempt to find a pair of inputs for addresses 1, 2 that produce the expected output.
+pub fn find_correct_inputs(program: &[usize], expected: usize) -> Option<Inputs> {
+	let mut instance = Vec::from(program);
+	for noun in 0..100_usize {
+		for verb in 0..100_usize {
+			instance.copy_from_slice(program);
+			instance[1] = noun;
+			instance[2] = verb;
+			if let Ok(()) = execute_program(&mut instance) {
+				if instance[0] == expected {
+					return Some(Inputs { noun, verb });
+				}
+			}
+		}
+	}
+
+	None
+}
