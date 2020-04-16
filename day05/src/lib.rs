@@ -1,5 +1,6 @@
 use std::fs;
 
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum Opcode {
 	Add,
 	Mult,
@@ -9,7 +10,7 @@ enum Opcode {
 }
 
 impl Opcode {
-	fn new(code: usize) -> Result<Opcode, IntcodeError> {
+	fn new(code: u32) -> Result<Opcode, IntcodeError> {
 		match code {
 			1 => Ok(Opcode::Add),
 			2 => Ok(Opcode::Mult),
@@ -19,14 +20,25 @@ impl Opcode {
 			_ => Err(IntcodeError::UnknownOpcode(code)),
 		}
 	}
+
+	fn param_count(&self) -> u32 {
+		match self {
+			Opcode::Add => 2,
+			Opcode::Mult => 2,
+			Opcode::Input => 1,
+			Opcode::Output => 1,
+			Opcode::Halt => 0,
+		}
+	}
 }
 
 #[derive(Debug)]
 pub enum IntcodeError {
-	UnknownOpcode(usize),
+	UnknownOpcode(u32),
 	UnknownParameterMode(u32),
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum ParameterMode {
 	Position,
 	Immediate,
@@ -93,7 +105,7 @@ pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
 pub fn execute_program(program: &mut [usize]) -> Result<(), IntcodeError> {
 	let mut idx: usize = 0;
 
-	while let Ok(code) = Opcode::new(program[idx]) {
+	while let Ok(code) = Opcode::new(program[idx] as u32) {
 		match code {
 			Opcode::Add => {
 				add(program, idx);
@@ -108,7 +120,30 @@ pub fn execute_program(program: &mut [usize]) -> Result<(), IntcodeError> {
 	}
 
 	// This feels awkward but `while let` doesn't have an else clause.
-	Err(IntcodeError::UnknownOpcode(program[idx]))
+	Err(IntcodeError::UnknownOpcode(program[idx] as u32))
+}
+
+/// Parse an instruction into its opcode and its respective parameter modes.
+///
+/// The last two digits are the opcode, the remaining are the parameter modes in reverse order.
+///
+/// ## Examples
+/// ```
+/// # use day05::{parse_instruction, Opcode, ParameterMode};
+/// let (op, modes) = parse_instruction(1002)?;
+/// assert_eq!(op, Opcode::Mult);
+/// assert_eq!(modes, vec![ParameterMode::Position, ParameterMode::Immediate]);
+/// ```
+pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>), IntcodeError> {
+	let (op_num, mut par_num) = (instruction % 100, instruction / 100);
+	let op = Opcode::new(op_num)?;
+	let mut modes = Vec::with_capacity(op.param_count() as usize);
+	for _ in 0..op.param_count() {
+		modes.push(ParameterMode::new(par_num % 10)?);
+		par_num /= 10;
+	}
+
+	Ok((op, modes))
 }
 
 /// Indirect Addition.
