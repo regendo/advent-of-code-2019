@@ -19,6 +19,16 @@ fn criteria_two_same(num: u32) -> bool {
 	false
 }
 
+fn criteria_two_same_strictly(num: u32) -> bool {
+	let mut digits = [0; 10];
+	let mut num = num;
+	while num > 0 {
+		digits[(num % 10) as usize] += 1;
+		num /= 10;
+	}
+	digits.iter().any(|n| *n == 2)
+}
+
 fn criteria_non_descending(num: u32) -> bool {
 	let mut num = num;
 	while num > 0 {
@@ -37,6 +47,18 @@ pub fn count_valid_options() -> u32 {
 			criteria_six_digits(*n)
 				&& criteria_in_range(*n)
 				&& criteria_two_same(*n)
+				&& criteria_non_descending(*n)
+		})
+		.count() as u32
+}
+
+pub fn count_valid_options_strictly() -> u32 {
+	(input::LOWER..=input::UPPER)
+		.filter(|n| {
+			// We don't _really_ need the first two sice we're already iterating over 6-digit in-range numbers.
+			criteria_six_digits(*n)
+				&& criteria_in_range(*n)
+				&& criteria_two_same_strictly(*n)
 				&& criteria_non_descending(*n)
 		})
 		.count() as u32
@@ -66,5 +88,32 @@ mod tests {
 		let valid =
 			criteria_non_descending(num) && criteria_six_digits(num) && criteria_two_same(num);
 		assert_eq!(valid, false);
+	}
+
+	#[test]
+	fn spec_all_double() {
+		let num = 11_22_33;
+		let valid = criteria_non_descending(num)
+			&& criteria_six_digits(num)
+			&& criteria_two_same_strictly(num);
+		assert_eq!(valid, true);
+	}
+
+	#[test]
+	fn spec_just_triplet() {
+		let num = 123_444;
+		let valid = criteria_non_descending(num)
+			&& criteria_six_digits(num)
+			&& criteria_two_same_strictly(num);
+		assert_eq!(valid, false);
+	}
+
+	#[test]
+	fn spec_with_multiplet() {
+		let num = 111_122;
+		let valid = criteria_non_descending(num)
+			&& criteria_six_digits(num)
+			&& criteria_two_same_strictly(num);
+		assert_eq!(valid, true);
 	}
 }

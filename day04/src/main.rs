@@ -5,4 +5,8 @@ fn main() {
 		"Found {} possible passwords that match our criteria.",
 		count_valid_options()
 	);
+	println!(
+		"With the new, more strict criteria, {} possible passwords remain.",
+		count_valid_options_strictly()
+	);
 }
