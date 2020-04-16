@@ -4,22 +4,42 @@ enum Opcode {
 	Add,
 	Mult,
 	Halt,
+	Input,
+	Output,
 }
 
 impl Opcode {
-	fn new(code: usize) -> Result<Opcode, OpcodeError> {
+	fn new(code: usize) -> Result<Opcode, IntcodeError> {
 		match code {
 			1 => Ok(Opcode::Add),
 			2 => Ok(Opcode::Mult),
+			3 => Ok(Opcode::Input),
+			4 => Ok(Opcode::Output),
 			99 => Ok(Opcode::Halt),
-			_ => Err(OpcodeError::UnknownOpcode(code)),
+			_ => Err(IntcodeError::UnknownOpcode(code)),
 		}
 	}
 }
 
 #[derive(Debug)]
-pub enum OpcodeError {
+pub enum IntcodeError {
 	UnknownOpcode(usize),
+	UnknownParameterMode(u32),
+}
+
+enum ParameterMode {
+	Position,
+	Immediate,
+}
+
+impl ParameterMode {
+	fn new(code: u32) -> Result<ParameterMode, IntcodeError> {
+		match code % 10 {
+			0 => Ok(ParameterMode::Position),
+			1 => Ok(ParameterMode::Immediate),
+			_ => Err(IntcodeError::UnknownParameterMode(code % 10)),
+		}
+	}
 }
 
 pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
@@ -70,7 +90,7 @@ pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
-pub fn execute_program(program: &mut [usize]) -> Result<(), OpcodeError> {
+pub fn execute_program(program: &mut [usize]) -> Result<(), IntcodeError> {
 	let mut idx: usize = 0;
 
 	while let Ok(code) = Opcode::new(program[idx]) {
@@ -88,7 +108,7 @@ pub fn execute_program(program: &mut [usize]) -> Result<(), OpcodeError> {
 	}
 
 	// This feels awkward but `while let` doesn't have an else clause.
-	Err(OpcodeError::UnknownOpcode(program[idx]))
+	Err(IntcodeError::UnknownOpcode(program[idx]))
 }
 
 /// Indirect Addition.
