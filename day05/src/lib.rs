@@ -139,7 +139,8 @@ pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
 			Opcode::Halt => return Ok(()),
 			Opcode::CompareEq => compare_eq(program, idx, &modes)?,
 			Opcode::CompareLt => compare_lt(program, idx, &modes)?,
-			_ => (), // TODO
+			Opcode::JumpZero => jump_zero(program, &mut idx, &modes)?,
+			Opcode::JumpNonZero => jump_non_zero(program, &mut idx, &modes)?,
 		}
 		if prev_idx == idx {
 			// don't move our instruction pointer if we jumped
@@ -296,6 +297,7 @@ pub fn compare_eq(
 	program[target] = if a == b { 1 } else { 0 };
 	Ok(())
 }
+
 pub fn compare_lt(
 	program: &mut [i32],
 	idx: usize,
@@ -308,6 +310,38 @@ pub fn compare_lt(
 	let b = parse_parameter(param_b, modes.next(), program)?;
 	let target = parse_address_parameter(param_target, modes.next())?;
 	program[target] = if a < b { 1 } else { 0 };
+	Ok(())
+}
+
+pub fn jump_zero(
+	program: &mut [i32],
+	idx: &mut usize,
+	modes: &[ParameterMode],
+) -> Result<(), IntcodeError> {
+	let (param_a, param_target) = (program[*idx + 1], program[*idx + 2]);
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	let target = parse_address_parameter(param_target, modes.next())?;
+	if a == 0 {
+		*idx = target;
+	}
+	Ok(())
+}
+
+pub fn jump_non_zero(
+	program: &mut [i32],
+	idx: &mut usize,
+	modes: &[ParameterMode],
+) -> Result<(), IntcodeError> {
+	let (param_a, param_target) = (program[*idx + 1], program[*idx + 2]);
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	let target = parse_address_parameter(param_target, modes.next())?;
+	if a != 0 {
+		*idx = target;
+	}
 	Ok(())
 }
 
