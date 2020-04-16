@@ -28,6 +28,25 @@ impl Point {
 		((self.x - other.x).abs() + (self.y - other.y).abs()) as u32
 	}
 
+	fn steps_from(self, other: Point, route: &[Direction]) -> Option<u32> {
+		let mut steps = 0;
+		let mut current_location = other;
+		// Yes, we re-run all directions.
+		// We didn't save information on steps in the first half of the exercise, and I'm not re-writing that now.
+		// We're re-running directions a lot actually, because we have to do this for each intersection - twice!
+		// And yes, it's slow.
+		for direction in route {
+			for location in current_location.travel(*direction) {
+				steps += 1;
+				if location == self {
+					return Some(steps);
+				}
+				current_location = location;
+			}
+		}
+		None
+	}
+
 	/// Travel a distance from this point, returning all points traveled through.
 	fn travel(self, direction: Direction) -> Vec<Point> {
 		let distance = match direction {
@@ -108,10 +127,33 @@ pub fn find_intersection_distances(a: Line, b: Line) -> HashMap<Point, u32> {
 }
 
 pub fn find_nearest_intersection<S: BuildHasher>(
-	intersections: HashMap<Point, u32, S>,
+	intersections: &HashMap<Point, u32, S>,
 ) -> Option<(Point, u32)> {
 	if let Some((p, d)) = intersections.iter().min_by_key(|(_, distance)| *distance) {
 		Some((*p, *d))
+	} else {
+		None
+	}
+}
+
+pub fn find_first_intersection<S: BuildHasher>(
+	intersections: &HashMap<Point, u32, S>,
+	directions_a: &[Direction],
+	directions_b: &[Direction],
+) -> Option<(Point, u32)> {
+	let base = Point { x: 0, y: 0 };
+
+	if let Some((p, s)) = intersections
+		.keys()
+		.map(|p| {
+			(
+				p,
+				p.steps_from(base, directions_a).unwrap() + p.steps_from(base, directions_b).unwrap(),
+			)
+		})
+		.min_by_key(|(_, s)| *s)
+	{
+		Some((*p, s))
 	} else {
 		None
 	}
@@ -135,10 +177,14 @@ mod tests {
 		let line_a = create_line(&directions_a);
 		let line_b = create_line(&directions_b);
 
-		let (_, distance) =
-			find_nearest_intersection(find_intersection_distances(line_a, line_b)).unwrap();
+		let intersections = find_intersection_distances(line_a, line_b);
 
+		let (_, distance) = find_nearest_intersection(&intersections).unwrap();
 		assert_eq!(distance, 159);
+
+		let (_, steps) =
+			find_first_intersection(&intersections, &directions_a, &directions_b).unwrap();
+		assert_eq!(steps, 610);
 	}
 	#[test]
 	fn spec_2() {
@@ -159,9 +205,13 @@ mod tests {
 		let line_a = create_line(&directions_a);
 		let line_b = create_line(&directions_b);
 
-		let (_, distance) =
-			find_nearest_intersection(find_intersection_distances(line_a, line_b)).unwrap();
+		let intersections = find_intersection_distances(line_a, line_b);
 
+		let (_, distance) = find_nearest_intersection(&intersections).unwrap();
 		assert_eq!(distance, 135);
+
+		let (_, steps) =
+			find_first_intersection(&intersections, &directions_a, &directions_b).unwrap();
+		assert_eq!(steps, 410);
 	}
 }
