@@ -1,7 +1,7 @@
 use std::fs;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum Opcode {
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Opcode {
 	Add,
 	Mult,
 	Halt,
@@ -21,7 +21,7 @@ impl Opcode {
 		}
 	}
 
-	fn param_count(&self) -> u32 {
+	fn param_count(self) -> u32 {
 		match self {
 			Opcode::Add => 2,
 			Opcode::Mult => 2,
@@ -36,10 +36,11 @@ impl Opcode {
 pub enum IntcodeError {
 	UnknownOpcode(u32),
 	UnknownParameterMode(u32),
+	ExcessiveParameterModes(u32),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum ParameterMode {
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum ParameterMode {
 	Position,
 	Immediate,
 }
@@ -130,7 +131,7 @@ pub fn execute_program(program: &mut [usize]) -> Result<(), IntcodeError> {
 /// ## Examples
 /// ```
 /// # use day05::{parse_instruction, Opcode, ParameterMode};
-/// let (op, modes) = parse_instruction(1002)?;
+/// let (op, modes) = parse_instruction(1002).unwrap();
 /// assert_eq!(op, Opcode::Mult);
 /// assert_eq!(modes, vec![ParameterMode::Position, ParameterMode::Immediate]);
 /// ```
@@ -141,6 +142,10 @@ pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>
 	for _ in 0..op.param_count() {
 		modes.push(ParameterMode::new(par_num % 10)?);
 		par_num /= 10;
+	}
+
+	if par_num > 0 {
+		return Err(IntcodeError::ExcessiveParameterModes(par_num));
 	}
 
 	Ok((op, modes))
