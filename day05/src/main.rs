@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		program[0]
 	);
 
-	let expected_output = 19_690_720_usize;
+	let expected_output = 19_690_720;
 	println!(
 		"Attempting to find inputs to produce the output {}.",
 		expected_output

@@ -23,8 +23,8 @@ impl Opcode {
 
 	fn param_count(self) -> u32 {
 		match self {
-			Opcode::Add => 2,
-			Opcode::Mult => 2,
+			Opcode::Add => 3,
+			Opcode::Mult => 3,
 			Opcode::Input => 1,
 			Opcode::Output => 1,
 			Opcode::Halt => 0,
@@ -37,6 +37,10 @@ pub enum IntcodeError {
 	UnknownOpcode(u32),
 	UnknownParameterMode(u32),
 	ExcessiveParameterModes(u32),
+	NegativeInstructionValue(i32),
+	NegativePositionalValue(i32),
+	TooFewParameterModes,
+	TargetNotPositional,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -55,12 +59,12 @@ impl ParameterMode {
 	}
 }
 
-pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
+pub fn load_program(file_path: &str) -> Result<Vec<i32>, std::io::Error> {
 	let file = fs::read_to_string(file_path)?;
 	let program = file
 		.trim()
 		.split(',')
-		.map(|s| s.parse::<usize>().unwrap())
+		.map(|s| s.parse::<i32>().unwrap())
 		.collect();
 	Ok(program)
 }
@@ -103,25 +107,28 @@ pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
-pub fn execute_program(program: &mut [usize]) -> Result<(), IntcodeError> {
+pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
 	let mut idx: usize = 0;
 
-	while let Ok(code) = Opcode::new(program[idx] as u32) {
-		match code {
+	loop {
+		let instruction = program[idx];
+		if instruction < 0 {
+			return Err(IntcodeError::NegativeInstructionValue(instruction));
+		}
+
+		let (opcode, modes) = parse_instruction(instruction as u32)?;
+		match opcode {
 			Opcode::Add => {
-				add(program, idx);
-				idx += 4;
+				add(program, idx, &modes)?;
 			}
 			Opcode::Mult => {
-				mult(program, idx);
-				idx += 4;
+				mult(program, idx, &modes)?;
 			}
 			Opcode::Halt => return Ok(()),
+			_ => return Ok(()), // TODO not implemented
 		}
+		idx += 1 + opcode.param_count() as usize;
 	}
-
-	// This feels awkward but `while let` doesn't have an else clause.
-	Err(IntcodeError::UnknownOpcode(program[idx] as u32))
 }
 
 /// Parse an instruction into its opcode and its respective parameter modes.
@@ -133,7 +140,7 @@ pub fn execute_program(program: &mut [usize]) -> Result<(), IntcodeError> {
 /// # use day05::{parse_instruction, Opcode, ParameterMode};
 /// let (op, modes) = parse_instruction(1002).unwrap();
 /// assert_eq!(op, Opcode::Mult);
-/// assert_eq!(modes, vec![ParameterMode::Position, ParameterMode::Immediate]);
+/// assert_eq!(modes, vec![ParameterMode::Position, ParameterMode::Immediate, ParameterMode::Position]);
 /// ```
 pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>), IntcodeError> {
 	let (op_num, mut par_num) = (instruction % 100, instruction / 100);
@@ -151,58 +158,104 @@ pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>
 	Ok((op, modes))
 }
 
-/// Indirect Addition.
-///
-/// Add the values referenced from positions `idx+1` and `idx+2`, and store them the position referenced at `idx+3`.
-///
-/// ## Examples
-///
-/// ```
-/// # use day05::add;
-/// let mut program = [3, 1, 0, 1, 2];
-/// add(&mut program, 1);
-/// assert_eq!(program, [3, 1, 4, 1, 2]);
-/// ```
-pub fn add(program: &mut [usize], idx: usize) {
-	let (adx, bdx, target_idx) = (program[idx + 1], program[idx + 2], program[idx + 3]);
-	let (a, b) = (program[adx], program[bdx]);
-	program[target_idx] = a + b;
+fn parse_parameter(
+	param: i32,
+	mode: Option<&ParameterMode>,
+	program: &[i32],
+) -> Result<i32, IntcodeError> {
+	match mode {
+		Some(ParameterMode::Immediate) => Ok(param),
+		Some(ParameterMode::Position) => {
+			if param < 0 {
+				Err(IntcodeError::NegativePositionalValue(param))
+			} else {
+				Ok(program[param as usize])
+			}
+		}
+		None => Err(IntcodeError::TooFewParameterModes),
+	}
 }
 
-/// Indirect Multiplication.
-///
-/// Multiply the values referenced from positions `idx+1` and `idx+2`, and store them the position referenced at `idx+3`.
+/// Addition.
 ///
 /// ## Examples
 ///
 /// ```
-/// # use day05::mult;
+/// # use day05::{add, parse_instruction};
+/// let mut program = [3, 1, 0, 1, 2];
+/// let idx = 1;
+/// let (_, modes) = parse_instruction(program[idx] as u32).unwrap();
+///
+/// add(&mut program, idx, &modes).unwrap();
+/// assert_eq!(program, [3, 1, 4, 1, 2]);
+/// ```
+pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(), IntcodeError> {
+	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	let b = parse_parameter(param_b, modes.next(), program)?;
+	if let Some(ParameterMode::Position) = modes.next() {
+		if param_target < 0 {
+			Err(IntcodeError::NegativePositionalValue(param_target))
+		} else {
+			let target = param_target as usize;
+			program[target] = a + b;
+			Ok(())
+		}
+	} else {
+		Err(IntcodeError::TargetNotPositional)
+	}
+}
+
+/// Multiplication.
+///
+/// ## Examples
+///
+/// ```
+/// # use day05::{mult, parse_instruction};
 /// let mut program = [3, 2, 0, 1, 2];
-/// mult(&mut program, 1);
+/// let idx = 1;
+/// let (_, modes) = parse_instruction(program[idx] as u32).unwrap();
+///
+/// mult(&mut program, idx, &modes).unwrap();
 /// assert_eq!(program, [3, 2, 6, 1, 2]);
 /// ```
-pub fn mult(program: &mut [usize], idx: usize) {
-	let (adx, bdx, target_idx) = (program[idx + 1], program[idx + 2], program[idx + 3]);
-	let (a, b) = (program[adx], program[bdx]);
-	program[target_idx] = a * b;
+pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(), IntcodeError> {
+	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	let b = parse_parameter(param_b, modes.next(), program)?;
+	if let Some(ParameterMode::Position) = modes.next() {
+		if param_target < 0 {
+			Err(IntcodeError::NegativePositionalValue(param_target))
+		} else {
+			let target = param_target as usize;
+			program[target] = a * b;
+			Ok(())
+		}
+	} else {
+		Err(IntcodeError::TargetNotPositional)
+	}
 }
 
 /// "[R]estore the [...] program [...] to the "1202 program alarm" state it had just before the last computer caught fire."
-pub fn restore_to_alarm_state(program: &mut [usize]) {
+pub fn restore_to_alarm_state(program: &mut [i32]) {
 	program[1] = 12;
 	program[2] = 2;
 }
 
 pub struct Inputs {
-	pub noun: usize,
-	pub verb: usize,
+	pub noun: i32,
+	pub verb: i32,
 }
 
 /// Attempt to find a pair of inputs for addresses 1, 2 that produce the expected output.
-pub fn find_correct_inputs(program: &[usize], expected: usize) -> Option<Inputs> {
+pub fn find_correct_inputs(program: &[i32], expected: i32) -> Option<Inputs> {
 	let mut instance = Vec::from(program);
-	for noun in 0..100_usize {
-		for verb in 0..100_usize {
+	for noun in 0..100 {
+		for verb in 0..100 {
 			instance.copy_from_slice(program);
 			instance[1] = noun;
 			instance[2] = verb;
