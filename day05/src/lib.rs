@@ -8,6 +8,10 @@ pub enum Opcode {
 	Halt,
 	Input,
 	Output,
+	JumpZero,
+	JumpNonZero,
+	CompareEq,
+	CompareLt,
 }
 
 impl Opcode {
@@ -17,6 +21,10 @@ impl Opcode {
 			2 => Ok(Opcode::Mult),
 			3 => Ok(Opcode::Input),
 			4 => Ok(Opcode::Output),
+			5 => Ok(Opcode::JumpNonZero),
+			6 => Ok(Opcode::JumpZero),
+			7 => Ok(Opcode::CompareLt),
+			8 => Ok(Opcode::CompareEq),
 			99 => Ok(Opcode::Halt),
 			_ => Err(IntcodeError::UnknownOpcode(code)),
 		}
@@ -29,6 +37,10 @@ impl Opcode {
 			Opcode::Input => 1,
 			Opcode::Output => 1,
 			Opcode::Halt => 0,
+			Opcode::JumpNonZero => 2,
+			Opcode::JumpZero => 2,
+			Opcode::CompareEq => 3,
+			Opcode::CompareLt => 3,
 		}
 	}
 }
