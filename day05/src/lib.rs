@@ -69,35 +69,35 @@ pub fn load_program(file_path: &str) -> Result<Vec<usize>, std::io::Error> {
 /// ## Examples
 /// 1.
 /// ```
-/// # use day02::execute_program;
+/// # use day05::execute_program;
 /// let mut program = [1,0,0,0,99];
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [2,0,0,0,99]);
 /// ```
 /// 2.
 /// ```
-/// # use day02::execute_program;
+/// # use day05::execute_program;
 /// let mut program = [2,3,0,3,99];
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [2,3,0,6,99]);
 /// ```
 /// 3.
 /// ```
-/// # use day02::execute_program;
+/// # use day05::execute_program;
 /// let mut program = [2,4,4,5,99,0];
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [2,4,4,5,99,9801]);
 /// ```
 /// 4.
 /// ```
-/// # use day02::execute_program;
+/// # use day05::execute_program;
 /// let mut program = [1,1,1,4,99,5,6,0,99];
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [30,1,1,4,2,5,6,0,99]);
 /// ```
 /// 5.
 /// ```
-/// # use day02::execute_program;
+/// # use day05::execute_program;
 /// let mut program = [1,9,10,3,2,3,11,0,99,30,40,50];
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
@@ -153,7 +153,7 @@ pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>
 /// ## Examples
 ///
 /// ```
-/// # use day02::add;
+/// # use day05::add;
 /// let mut program = [3, 1, 0, 1, 2];
 /// add(&mut program, 1);
 /// assert_eq!(program, [3, 1, 4, 1, 2]);
@@ -171,7 +171,7 @@ pub fn add(program: &mut [usize], idx: usize) {
 /// ## Examples
 ///
 /// ```
-/// # use day02::mult;
+/// # use day05::mult;
 /// let mut program = [3, 2, 0, 1, 2];
 /// mult(&mut program, 1);
 /// assert_eq!(program, [3, 2, 6, 1, 2]);

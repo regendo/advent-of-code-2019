@@ -1,4 +1,4 @@
-use day02::*;
+use day05::*;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
