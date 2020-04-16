@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
+use std::hash::BuildHasher;
 
 type Line = HashSet<Point>;
 
@@ -106,7 +107,9 @@ pub fn find_intersection_distances(a: Line, b: Line) -> HashMap<Point, u32> {
 	map
 }
 
-pub fn find_nearest_intersection(intersections: HashMap<Point, u32>) -> Option<(Point, u32)> {
+pub fn find_nearest_intersection<S: BuildHasher>(
+	intersections: HashMap<Point, u32, S>,
+) -> Option<(Point, u32)> {
 	if let Some((p, d)) = intersections.iter().min_by_key(|(_, distance)| *distance) {
 		Some((*p, *d))
 	} else {
