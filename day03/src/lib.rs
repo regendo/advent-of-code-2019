@@ -13,8 +13,8 @@ pub enum Direction {
 	Down(u32),
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-struct Point {
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct Point {
 	x: i32,
 	y: i32,
 }
@@ -73,7 +73,7 @@ pub fn read_directions(path: &str) -> Result<(Vec<Direction>, Vec<Direction>), B
 	Ok((inputs.next().unwrap(), inputs.next().unwrap()))
 }
 
-fn create_line(directions: &[Direction]) -> Line {
+pub fn create_line(directions: &[Direction]) -> Line {
 	let mut line = Line::new();
 	let mut current_location = Point { x: 0, y: 0 };
 	// Inserting {0, 0} into our set might seem stupid because we'll filter it back out later
@@ -94,7 +94,7 @@ fn create_line(directions: &[Direction]) -> Line {
 	line
 }
 
-fn find_intersection_distances(a: Line, b: Line) -> HashMap<Point, u32> {
+pub fn find_intersection_distances(a: Line, b: Line) -> HashMap<Point, u32> {
 	let base = Point { x: 0, y: 0 };
 	let intersections = a.intersection(&b).filter(|p| **p != base);
 	let mut map = HashMap::new();
@@ -106,7 +106,7 @@ fn find_intersection_distances(a: Line, b: Line) -> HashMap<Point, u32> {
 	map
 }
 
-fn find_nearest_intersection(intersections: HashMap<Point, u32>) -> Option<(Point, u32)> {
+pub fn find_nearest_intersection(intersections: HashMap<Point, u32>) -> Option<(Point, u32)> {
 	if let Some((p, d)) = intersections.iter().min_by_key(|(_, distance)| *distance) {
 		Some((*p, *d))
 	} else {
