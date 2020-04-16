@@ -186,6 +186,21 @@ fn parse_parameter(
 	}
 }
 
+fn parse_address_parameter(
+	param: i32,
+	mode: Option<&ParameterMode>,
+) -> Result<usize, IntcodeError> {
+	if let Some(ParameterMode::Position) = mode {
+		if param < 0 {
+			Err(IntcodeError::NegativePositionalValue(param))
+		} else {
+			Ok(param as usize)
+		}
+	} else {
+		Err(IntcodeError::TargetNotPositional)
+	}
+}
+
 /// Addition.
 ///
 /// ## Examples
@@ -205,18 +220,10 @@ pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(
 
 	let a = parse_parameter(param_a, modes.next(), program)?;
 	let b = parse_parameter(param_b, modes.next(), program)?;
-	if let Some(ParameterMode::Position) = modes.next() {
-		if param_target < 0 {
-			Err(IntcodeError::NegativePositionalValue(param_target))
-		} else {
-			let target = param_target as usize;
+	let target = parse_address_parameter(param_target, modes.next())?;
 			program[target] = a + b;
 			Ok(())
 		}
-	} else {
-		Err(IntcodeError::TargetNotPositional)
-	}
-}
 
 /// Multiplication.
 ///
@@ -237,18 +244,10 @@ pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<
 
 	let a = parse_parameter(param_a, modes.next(), program)?;
 	let b = parse_parameter(param_b, modes.next(), program)?;
-	if let Some(ParameterMode::Position) = modes.next() {
-		if param_target < 0 {
-			Err(IntcodeError::NegativePositionalValue(param_target))
-		} else {
-			let target = param_target as usize;
+	let target = parse_address_parameter(param_target, modes.next())?;
 			program[target] = a * b;
 			Ok(())
 		}
-	} else {
-		Err(IntcodeError::TargetNotPositional)
-	}
-}
 
 pub fn output(
 	program: &mut [i32],
