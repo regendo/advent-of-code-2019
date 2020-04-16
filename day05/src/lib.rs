@@ -247,7 +247,7 @@ pub fn output(
 	let mut modes = modes.iter();
 
 	let a = parse_parameter(param_a, modes.next(), program)?;
-	print!("{}", a);
+	println!("{}", a);
 	Ok(())
 }
 
