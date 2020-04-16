@@ -50,24 +50,25 @@ impl Point {
 	}
 }
 
-pub fn read_directions(path: &str) -> Result<(Vec<Direction>, Vec<Direction>), Box<dyn Error>> {
-	let mapper = |code: &str| -> Direction {
-		let distance = code[1..].parse::<u32>().unwrap();
-		// can't match on `code.starts_with(&str)` so here's this
-		match code.chars().next() {
-			Some('L') => Direction::Left(distance),
-			Some('R') => Direction::Right(distance),
-			Some('U') => Direction::Up(distance),
-			Some('D') => Direction::Down(distance),
-			_ => panic!("Unexpected code: {}", code),
-		}
-	};
+fn map_code_to_dir(code: &str) -> Direction {
+	let distance = code[1..].parse::<u32>().unwrap();
+	// can't match on `code.starts_with(&str)` so here's this
+	match code.chars().next() {
+		Some('L') => Direction::Left(distance),
+		Some('R') => Direction::Right(distance),
+		Some('U') => Direction::Up(distance),
+		Some('D') => Direction::Down(distance),
+		_ => panic!("Unexpected code: {}", code),
+	}
+}
 
+pub fn read_directions(path: &str) -> Result<(Vec<Direction>, Vec<Direction>), Box<dyn Error>> {
 	let file = fs::read_to_string(path)?;
-	let mut inputs = file
-		.trim()
-		.lines()
-		.map(|l| l.split(',').map(mapper).collect::<Vec<Direction>>());
+	let mut inputs = file.trim().lines().map(|l| {
+		l.split(',')
+			.map(map_code_to_dir)
+			.collect::<Vec<Direction>>()
+	});
 
 	Ok((inputs.next().unwrap(), inputs.next().unwrap()))
 }
@@ -110,5 +111,54 @@ fn find_nearest_intersection(intersections: HashMap<Point, u32>) -> Option<(Poin
 		Some((*p, *d))
 	} else {
 		None
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn spec_1() {
+		let directions_a = ["R75", "D30", "R83", "U83", "L12", "D49", "R71", "U7", "L72"]
+			.iter()
+			.map(|code| map_code_to_dir(*code))
+			.collect::<Vec<_>>();
+		let directions_b = ["U62", "R66", "U55", "R34", "D71", "R55", "D58", "R83"]
+			.iter()
+			.map(|code| map_code_to_dir(*code))
+			.collect::<Vec<_>>();
+
+		let line_a = create_line(&directions_a);
+		let line_b = create_line(&directions_b);
+
+		let (_, distance) =
+			find_nearest_intersection(find_intersection_distances(line_a, line_b)).unwrap();
+
+		assert_eq!(distance, 159);
+	}
+	#[test]
+	fn spec_2() {
+		let directions_a = [
+			"R98", "U47", "R26", "D63", "R33", "U87", "L62", "D20", "R33", "U53", "R51",
+		]
+		.iter()
+		.map(|code| map_code_to_dir(*code))
+		.collect::<Vec<_>>();
+
+		let directions_b = [
+			"U98", "R91", "D20", "R16", "D67", "R40", "U7", "R15", "U6", "R7",
+		]
+		.iter()
+		.map(|code| map_code_to_dir(*code))
+		.collect::<Vec<_>>();
+
+		let line_a = create_line(&directions_a);
+		let line_b = create_line(&directions_b);
+
+		let (_, distance) =
+			find_nearest_intersection(find_intersection_distances(line_a, line_b)).unwrap();
+
+		assert_eq!(distance, 135);
 	}
 }
