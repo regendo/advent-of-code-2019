@@ -51,9 +51,9 @@ pub enum IntcodeError {
 	UnknownParameterMode(u32),
 	ExcessiveParameterModes(u32),
 	NegativeInstructionValue(i32),
-	NegativePositionalValue(i32),
+	InvalidAddress(i32),
 	TooFewParameterModes,
-	TargetNotPositional,
+	WrongParameterMode,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -185,7 +185,7 @@ fn parse_parameter(
 		Some(ParameterMode::Immediate) => Ok(param),
 		Some(ParameterMode::Position) => {
 			if param < 0 {
-				Err(IntcodeError::NegativePositionalValue(param))
+				Err(IntcodeError::InvalidAddress(param))
 			} else {
 				Ok(program[param as usize])
 			}
@@ -200,12 +200,33 @@ fn parse_address_parameter(
 ) -> Result<usize, IntcodeError> {
 	if let Some(ParameterMode::Position) = mode {
 		if param < 0 {
-			Err(IntcodeError::NegativePositionalValue(param))
+			Err(IntcodeError::InvalidAddress(param))
 		} else {
 			Ok(param as usize)
 		}
 	} else {
-		Err(IntcodeError::TargetNotPositional)
+		Err(IntcodeError::WrongParameterMode)
+	}
+}
+
+fn parse_jump_parameter(
+	param: i32,
+	mode: Option<&ParameterMode>,
+	program: &[i32],
+) -> Result<usize, IntcodeError> {
+	if param < 0 {
+		return Err(IntcodeError::InvalidAddress(param));
+	}
+	let param = param as usize;
+	if let Some(ParameterMode::Immediate) = mode {
+		Ok(param)
+	} else {
+		let address = program[param];
+		if address < 0 {
+			Err(IntcodeError::InvalidAddress(address))
+		} else {
+			Ok(address as usize)
+		}
 	}
 }
 
@@ -322,7 +343,7 @@ pub fn jump_zero(
 	let mut modes = modes.iter();
 
 	let a = parse_parameter(param_a, modes.next(), program)?;
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let target = parse_jump_parameter(param_target, modes.next(), program)?;
 	if a == 0 {
 		*idx = target;
 	}
@@ -338,7 +359,7 @@ pub fn jump_non_zero(
 	let mut modes = modes.iter();
 
 	let a = parse_parameter(param_a, modes.next(), program)?;
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let target = parse_jump_parameter(param_target, modes.next(), program)?;
 	if a != 0 {
 		*idx = target;
 	}
