@@ -124,6 +124,7 @@ pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
 	let mut idx: usize = 0;
 
 	loop {
+		let prev_idx = idx;
 		let instruction = program[idx];
 		if instruction < 0 {
 			return Err(IntcodeError::NegativeInstructionValue(instruction));
@@ -136,8 +137,14 @@ pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
 			Opcode::Input => input(program, idx, &modes)?,
 			Opcode::Output => output(program, idx, &modes)?,
 			Opcode::Halt => return Ok(()),
+			Opcode::CompareEq => compare_eq(program, idx, &modes)?,
+			Opcode::CompareLt => compare_lt(program, idx, &modes)?,
+			_ => (), // TODO
 		}
-		idx += 1 + opcode.param_count() as usize;
+		if prev_idx == idx {
+			// don't move our instruction pointer if we jumped
+			idx += 1 + opcode.param_count() as usize;
+		}
 	}
 }
 
@@ -221,9 +228,9 @@ pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(
 	let a = parse_parameter(param_a, modes.next(), program)?;
 	let b = parse_parameter(param_b, modes.next(), program)?;
 	let target = parse_address_parameter(param_target, modes.next())?;
-			program[target] = a + b;
-			Ok(())
-		}
+	program[target] = a + b;
+	Ok(())
+}
 
 /// Multiplication.
 ///
@@ -245,9 +252,9 @@ pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<
 	let a = parse_parameter(param_a, modes.next(), program)?;
 	let b = parse_parameter(param_b, modes.next(), program)?;
 	let target = parse_address_parameter(param_target, modes.next())?;
-			program[target] = a * b;
-			Ok(())
-		}
+	program[target] = a * b;
+	Ok(())
+}
 
 pub fn output(
 	program: &mut [i32],
@@ -266,22 +273,42 @@ pub fn input(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result
 	let param_target = program[idx + 1];
 	let mut modes = modes.iter();
 
-	if let Some(ParameterMode::Position) = modes.next() {
-		if param_target < 0 {
-			Err(IntcodeError::NegativePositionalValue(param_target))
-		} else {
-			let target = param_target as usize;
+	let target = parse_address_parameter(param_target, modes.next())?;
+	let mut input = String::new();
+	io::stdin().read_line(&mut input).unwrap();
+	let num = input.trim().parse::<i32>().unwrap();
 
-			let mut input = String::new();
-			io::stdin().read_line(&mut input).unwrap();
-			let num = input.trim().parse::<i32>().unwrap();
+	program[target] = num;
+	Ok(())
+}
 
-			program[target] = num;
-			Ok(())
-		}
-	} else {
-		Err(IntcodeError::TargetNotPositional)
-	}
+pub fn compare_eq(
+	program: &mut [i32],
+	idx: usize,
+	modes: &[ParameterMode],
+) -> Result<(), IntcodeError> {
+	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	let b = parse_parameter(param_b, modes.next(), program)?;
+	let target = parse_address_parameter(param_target, modes.next())?;
+	program[target] = if a == b { 1 } else { 0 };
+	Ok(())
+}
+pub fn compare_lt(
+	program: &mut [i32],
+	idx: usize,
+	modes: &[ParameterMode],
+) -> Result<(), IntcodeError> {
+	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	let b = parse_parameter(param_b, modes.next(), program)?;
+	let target = parse_address_parameter(param_target, modes.next())?;
+	program[target] = if a < b { 1 } else { 0 };
+	Ok(())
 }
 
 /// "[R]estore the [...] program [...] to the "1202 program alarm" state it had just before the last computer caught fire."
