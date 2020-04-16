@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Opcode {
@@ -118,14 +119,11 @@ pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
 
 		let (opcode, modes) = parse_instruction(instruction as u32)?;
 		match opcode {
-			Opcode::Add => {
-				add(program, idx, &modes)?;
-			}
-			Opcode::Mult => {
-				mult(program, idx, &modes)?;
-			}
+			Opcode::Add => add(program, idx, &modes)?,
+			Opcode::Mult => mult(program, idx, &modes)?,
+			Opcode::Input => input(program, idx, &modes)?,
+			Opcode::Output => output(program, idx, &modes)?,
 			Opcode::Halt => return Ok(()),
-			_ => return Ok(()), // TODO not implemented
 		}
 		idx += 1 + opcode.param_count() as usize;
 	}
@@ -233,6 +231,41 @@ pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<
 		} else {
 			let target = param_target as usize;
 			program[target] = a * b;
+			Ok(())
+		}
+	} else {
+		Err(IntcodeError::TargetNotPositional)
+	}
+}
+
+pub fn output(
+	program: &mut [i32],
+	idx: usize,
+	modes: &[ParameterMode],
+) -> Result<(), IntcodeError> {
+	let param_a = program[idx + 1];
+	let mut modes = modes.iter();
+
+	let a = parse_parameter(param_a, modes.next(), program)?;
+	print!("{}", a);
+	Ok(())
+}
+
+pub fn input(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(), IntcodeError> {
+	let param_target = program[idx + 1];
+	let mut modes = modes.iter();
+
+	if let Some(ParameterMode::Position) = modes.next() {
+		if param_target < 0 {
+			Err(IntcodeError::NegativePositionalValue(param_target))
+		} else {
+			let target = param_target as usize;
+
+			let mut input = String::new();
+			io::stdin().read_line(&mut input).unwrap();
+			let num = input.trim().parse::<i32>().unwrap();
+
+			program[target] = num;
 			Ok(())
 		}
 	} else {
