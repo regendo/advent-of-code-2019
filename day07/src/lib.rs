@@ -1,4 +1,4 @@
-use day05::{execute_program, load_program};
+use day05::execute_program;
 
 fn execute_with_input(program: &[i32], input: &str) -> String {
 	let input = input.as_bytes();
@@ -41,39 +41,46 @@ fn execute_with_input(program: &[i32], input: &str) -> String {
 /// let output = chain_amplifiers(&program, &phases);
 /// assert_eq!(output.lines().next(), Some("65210"));
 /// ```
-pub fn chain_amplifiers(program: &[i32], phases: &[u8; 5]) -> String {
+pub fn chain_amplifiers(program: &[i32], phases: [u8; 5]) -> String {
 	let mut input = String::from("0");
-	for phase in phases {
+	for phase in phases.iter() {
 		input = execute_with_input(program, &format!("{}\n{}", phase, input));
 	}
 
 	input
 }
 
-struct Permutations {}
-impl Permutations {
+/// Iterator that generates all possible phase sequences
+struct Phases {
+	counter: u32,
+}
+impl Phases {
 	fn new() -> Self {
-		Permutations {}
+		Phases { counter: 0 }
 	}
 }
 
-impl Iterator for Permutations {
+impl Iterator for Phases {
+	// each phase is one permutation of the numbers 0..=4.
 	type Item = [u8; 5];
 
 	fn next(&mut self) -> Option<Self::Item> {
+		self.counter += 1;
 		// TODO
-		Some([4, 3, 2, 1, 0])
+		if self.counter == 1 {
+			Some([4, 3, 2, 1, 0])
+		} else {
+			None
+		}
 	}
 }
 
 /// For a program, find the phase settings that produce the highest output.
-fn find_optimal_phases(program: &[i32]) -> ([u8; 5], i32) {
-	// valid range for phases: 0-4
-	// each phase setting is used exactly once -> find the correct permutation
+pub fn find_optimal_phases(program: &[i32]) -> Option<([u8; 5], i32)> {
 	let mut max: Option<([u8; 5], i32)> = None;
-	let mut permutations = Permutations::new();
+	let permutations = Phases::new();
 	for phases in permutations {
-		let output = chain_amplifiers(program, &phases)
+		let output = chain_amplifiers(program, phases)
 			.lines()
 			.next()
 			.unwrap()
@@ -88,5 +95,5 @@ fn find_optimal_phases(program: &[i32]) -> ([u8; 5], i32) {
 		}
 	}
 
-	max.unwrap()
+	max
 }
