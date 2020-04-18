@@ -61,7 +61,8 @@ impl Satellite {
 		if let Some(common_orbit) = self.greatest_common_orbit(Rc::clone(&other)) {
 			let dist_a = self.orbit_distance(Rc::clone(&common_orbit));
 			let dist_b = other.orbit_distance(common_orbit);
-			dist_a.and_then(|a| dist_b.map(|b| a + b))
+			// Should probably fix the logic (calculating the distances from each orbit, not each satellite) instead of just subtracting 2
+			dist_a.and_then(|a| dist_b.map(|b| a + b - 2))
 		} else {
 			None
 		}
