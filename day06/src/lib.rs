@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
@@ -5,14 +6,14 @@ use std::rc::Rc;
 #[derive(Debug)]
 struct Satellite {
 	name: String,
-	orbit: Option<Rc<Satellite>>,
+	orbit: RefCell<Option<Rc<Satellite>>>,
 }
 
 impl Satellite {
 	fn new(name: &str) -> Rc<Satellite> {
 		Rc::new(Satellite {
 			name: name.to_string(),
-			orbit: None,
+			orbit: RefCell::new(None),
 		})
 	}
 }
@@ -38,8 +39,11 @@ fn build_solar_system(input: &[(&str, &str)]) {
 		if !solar_system.contains_key(orb) {
 			solar_system.insert(orb, Satellite::new(orb));
 		}
-		let satellite = solar_system.entry(sat).or_insert(Satellite::new(sat));
+		if !solar_system.contains_key(sat) {
+			solar_system.insert(sat, Satellite::new(sat));
+		}
 
-		satellite.orbit = Some(Rc::clone(solar_system.get(orb).unwrap()));
+		let satellite = solar_system.get(sat).unwrap();
+		*satellite.orbit.borrow_mut() = Some(Rc::clone(solar_system.get(orb).unwrap()));
 	}
 }
