@@ -1,5 +1,5 @@
 use std::fs;
-use std::io;
+use std::io::{BufRead, Write};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Opcode {
@@ -120,7 +120,15 @@ pub fn load_program(file_path: &str) -> Result<Vec<i32>, std::io::Error> {
 /// execute_program(&mut program).unwrap();
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
-pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
+pub fn execute_program<R, W>(
+	program: &mut [i32],
+	mut reader: R,
+	mut writer: W,
+) -> Result<(), IntcodeError>
+where
+	R: BufRead,
+	W: Write,
+{
 	let mut idx: usize = 0;
 
 	loop {
@@ -134,8 +142,8 @@ pub fn execute_program(program: &mut [i32]) -> Result<(), IntcodeError> {
 		match opcode {
 			Opcode::Add => add(program, idx, &modes)?,
 			Opcode::Mult => mult(program, idx, &modes)?,
-			Opcode::Input => input(program, idx, &modes)?,
-			Opcode::Output => output(program, idx, &modes)?,
+			Opcode::Input => input(program, idx, &modes, &mut reader)?,
+			Opcode::Output => output(program, idx, &modes, &mut writer)?,
 			Opcode::Halt => return Ok(()),
 			Opcode::CompareEq => compare_eq(program, idx, &modes)?,
 			Opcode::CompareLt => compare_lt(program, idx, &modes)?,
@@ -278,26 +286,38 @@ pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<
 	Ok(())
 }
 
-pub fn output(
+pub fn output<W>(
 	program: &mut [i32],
 	idx: usize,
 	modes: &[ParameterMode],
-) -> Result<(), IntcodeError> {
+	mut writer: W,
+) -> Result<(), IntcodeError>
+where
+	W: Write,
+{
 	let param_a = program[idx + 1];
 	let mut modes = modes.iter();
 
 	let a = parse_parameter(param_a, modes.next(), program)?;
-	println!("{}", a);
+	writeln!(&mut writer, "{}", a).expect("Can't write to output!");
 	Ok(())
 }
 
-pub fn input(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(), IntcodeError> {
+pub fn input<R>(
+	program: &mut [i32],
+	idx: usize,
+	modes: &[ParameterMode],
+	mut reader: R,
+) -> Result<(), IntcodeError>
+where
+	R: BufRead,
+{
 	let param_target = program[idx + 1];
 	let mut modes = modes.iter();
 
 	let target = parse_address_parameter(param_target, modes.next())?;
 	let mut input = String::new();
-	io::stdin().read_line(&mut input).unwrap();
+	reader.read_line(&mut input).unwrap();
 	let num = input.trim().parse::<i32>().unwrap();
 
 	program[target] = num;
@@ -378,14 +398,23 @@ pub struct Inputs {
 }
 
 /// Attempt to find a pair of inputs for addresses 1, 2 that produce the expected output.
-pub fn find_correct_inputs(program: &[i32], expected: i32) -> Option<Inputs> {
+pub fn find_correct_inputs<R, W>(
+	program: &[i32],
+	expected: i32,
+	mut reader: R,
+	mut writer: W,
+) -> Option<Inputs>
+where
+	R: BufRead,
+	W: Write,
+{
 	let mut instance = Vec::from(program);
 	for noun in 0..100 {
 		for verb in 0..100 {
 			instance.copy_from_slice(program);
 			instance[1] = noun;
 			instance[2] = verb;
-			if let Ok(()) = execute_program(&mut instance) {
+			if let Ok(()) = execute_program(&mut instance, &mut reader, &mut writer) {
 				if instance[0] == expected {
 					return Some(Inputs { noun, verb });
 				}
