@@ -41,11 +41,52 @@ fn execute_with_input(program: &[i32], input: &str) -> String {
 /// let output = chain_amplifiers(&program, &phases);
 /// assert_eq!(output.lines().next(), Some("65210"));
 /// ```
-pub fn chain_amplifiers(program: &[i32], phases: &[u8]) -> String {
+pub fn chain_amplifiers(program: &[i32], phases: &[u8; 5]) -> String {
 	let mut input = String::from("0");
 	for phase in phases {
 		input = execute_with_input(program, &format!("{}\n{}", phase, input));
 	}
 
 	input
+}
+
+struct Permutations {}
+impl Permutations {
+	fn new() -> Self {
+		Permutations {}
+	}
+}
+
+impl Iterator for Permutations {
+	type Item = [u8; 5];
+
+	fn next(&mut self) -> Option<Self::Item> {
+		// TODO
+		Some([4, 3, 2, 1, 0])
+	}
+}
+
+/// For a program, find the phase settings that produce the highest output.
+fn find_optimal_phases(program: &[i32]) -> ([u8; 5], i32) {
+	// valid range for phases: 0-4
+	// each phase setting is used exactly once -> find the correct permutation
+	let mut max: Option<([u8; 5], i32)> = None;
+	let mut permutations = Permutations::new();
+	for phases in permutations {
+		let output = chain_amplifiers(program, &phases)
+			.lines()
+			.next()
+			.unwrap()
+			.parse::<i32>()
+			.unwrap();
+		if let Some((_, value)) = max {
+			if output > value {
+				max = Some((phases, output));
+			}
+		} else {
+			max = Some((phases, output));
+		}
+	}
+
+	max.unwrap()
 }
