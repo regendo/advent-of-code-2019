@@ -32,18 +32,21 @@ fn read_input(path: &str) -> Vec<(String, String)> {
 		.collect()
 }
 
-fn build_solar_system(input: &[(&str, &str)]) {
-	let mut solar_system = HashMap::<&str, Rc<Satellite>>::new();
+fn build_solar_system(input: &[(&str, &str)]) -> HashMap<String, Rc<Satellite>> {
+	let mut solar_system = HashMap::<String, Rc<Satellite>>::new();
 
 	for (orb, sat) in input {
-		if !solar_system.contains_key(orb) {
-			solar_system.insert(orb, Satellite::new(orb));
-		}
-		if !solar_system.contains_key(sat) {
-			solar_system.insert(sat, Satellite::new(sat));
-		}
+		solar_system
+			.entry((*orb).to_string())
+			.or_insert_with(|| Satellite::new(orb));
+		solar_system
+			.entry((*sat).to_string())
+			.or_insert_with(|| Satellite::new(sat));
 
-		let satellite = solar_system.get(sat).unwrap();
-		*satellite.orbit.borrow_mut() = Some(Rc::clone(solar_system.get(orb).unwrap()));
+		// we need to get it here instead of above through `or_insert_with` because that would mutably borrow
+		let satellite = solar_system.get(*sat).unwrap();
+		*satellite.orbit.borrow_mut() = Some(Rc::clone(solar_system.get(*orb).unwrap()));
 	}
+
+	solar_system
 }
