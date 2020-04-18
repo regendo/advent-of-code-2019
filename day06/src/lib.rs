@@ -1,10 +1,11 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
+use std::hash::BuildHasher;
 use std::rc::Rc;
 
 #[derive(Debug)]
-struct Satellite {
+pub struct Satellite {
 	name: String,
 	orbit: RefCell<Option<Rc<Satellite>>>,
 }
@@ -16,9 +17,16 @@ impl Satellite {
 			orbit: RefCell::new(None),
 		})
 	}
+
+	fn count_orbits(&self) -> u32 {
+		match &*self.orbit.borrow() {
+			None => 0,
+			Some(other) => 1 + other.count_orbits(),
+}
+	}
 }
 
-fn read_input(path: &str) -> Vec<(String, String)> {
+pub fn read_input(path: &str) -> Vec<(String, String)> {
 	fs::read_to_string(path)
 		.unwrap()
 		.lines()
@@ -32,7 +40,7 @@ fn read_input(path: &str) -> Vec<(String, String)> {
 		.collect()
 }
 
-fn build_solar_system(input: &[(&str, &str)]) -> HashMap<String, Rc<Satellite>> {
+pub fn build_solar_system(input: &[(&str, &str)]) -> HashMap<String, Rc<Satellite>> {
 	let mut solar_system = HashMap::<String, Rc<Satellite>>::new();
 
 	for (orb, sat) in input {
@@ -49,4 +57,8 @@ fn build_solar_system(input: &[(&str, &str)]) -> HashMap<String, Rc<Satellite>> 
 	}
 
 	solar_system
+}
+
+pub fn count_total_orbits<S: BuildHasher>(solar_system: &HashMap<String, Rc<Satellite>, S>) -> u32 {
+	solar_system.values().map(|sat| sat.count_orbits()).sum()
 }
