@@ -50,13 +50,62 @@ pub fn chain_amplifiers(program: &[i32], phases: [u8; 5]) -> String {
 	input
 }
 
-/// Iterator that generates all possible phase sequences
-struct Phases {
-	counter: u32,
+/// Iterator that generates all possible phase sequences.
+///
+/// ## Examples
+///
+/// Normal usage
+///
+/// ```
+/// # use day07::Phases;
+/// let mut it = Phases::new();
+/// assert_eq!(it.next(), Some([0, 1, 2, 3, 4]));
+/// ```
+///
+/// Last element
+///
+/// ```
+/// # use day07::Phases;
+/// let mut it = Phases::new();
+/// assert_eq!(it.last(), Some([4, 3, 2, 1, 0]));
+/// ```
+///
+/// Only 5! or 120 ways to arrange 5 numbers
+///
+/// ```
+/// # use day07::Phases;
+/// let mut it = Phases::new();
+/// assert_eq!(it.count(), 120);
+/// ```
+pub struct Phases {
+	permutation: [u8; 5],
+	started: bool,
 }
 impl Phases {
-	fn new() -> Self {
-		Phases { counter: 0 }
+	#[allow(clippy::new_without_default)]
+	pub fn new() -> Self {
+		Phases {
+			permutation: [0, 1, 2, 3, 4],
+			started: false,
+		}
+	}
+
+	fn index_of_rightmost_pairwise_sorted(&self) -> Option<usize> {
+		for k in (0..4).rev() {
+			if self.permutation[k] < self.permutation[k + 1] {
+				return Some(k);
+			}
+		}
+		None
+	}
+
+	fn index_of_rightmost_larger(&self, k: usize) -> Option<usize> {
+		for l in ((k + 1)..=4).rev() {
+			if self.permutation[k] < self.permutation[l] {
+				return Some(l);
+			}
+		}
+		None
 	}
 }
 
@@ -65,13 +114,21 @@ impl Iterator for Phases {
 	type Item = [u8; 5];
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.counter += 1;
-		// TODO
-		if self.counter == 1 {
-			Some([4, 3, 2, 1, 0])
-		} else {
-			None
+		if !self.started {
+			self.started = true;
+			return Some(self.permutation);
 		}
+		if self.permutation == [4, 3, 2, 1, 0] {
+			return None;
+		}
+		// generate the next permutation in lexicographical order
+		// see also: https://en.wikipedia.org/wiki/Permutation#Generation_in_lexicographic_order
+		let k = self.index_of_rightmost_pairwise_sorted()?;
+		let l = self.index_of_rightmost_larger(k)?;
+		self.permutation.swap(k, l);
+		self.permutation[(k + 1)..=4].reverse();
+
+		Some(self.permutation)
 	}
 }
 
