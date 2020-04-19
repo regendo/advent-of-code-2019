@@ -1,5 +1,8 @@
 use std::fs;
 
+type Layer<'a> = Vec<&'a [u8]>;
+type Image<'a> = Vec<Layer<'a>>;
+
 fn string_to_data(string: &str) -> Vec<u8> {
 	string
 		.trim()
@@ -9,11 +12,11 @@ fn string_to_data(string: &str) -> Vec<u8> {
 		.collect()
 }
 
-fn read_input(path: &str) -> Vec<u8> {
+pub fn read_input(path: &str) -> Vec<u8> {
 	string_to_data(&fs::read_to_string(path).unwrap())
 }
 
-fn split_into_layers_by_dimension(data: &[u8], width: usize, height: usize) -> Vec<Vec<&[u8]>> {
+pub fn split_into_layers_by_dimension(data: &[u8], width: usize, height: usize) -> Image {
 	let layers = data.len() / (width * height);
 	let mut image = Vec::new();
 
@@ -31,6 +34,25 @@ fn split_into_layers_by_dimension(data: &[u8], width: usize, height: usize) -> V
 	}
 
 	image
+}
+
+#[allow(clippy::ptr_arg)]
+fn count_digit(layer: &Layer, digit: u8) -> u32 {
+	#[allow(clippy::naive_bytecount)]
+	layer
+		.iter()
+		.map(|row| row.iter().filter(|px| **px == digit).count() as u32)
+		.sum()
+}
+
+#[allow(clippy::ptr_arg)]
+pub fn compute_checksum(image: &Image) -> u32 {
+	let layer_to_check = image
+		.iter()
+		.min_by_key(|layer| count_digit(&layer, 0))
+		.unwrap();
+
+	count_digit(&layer_to_check, 1) * count_digit(&layer_to_check, 2)
 }
 
 #[cfg(test)]
