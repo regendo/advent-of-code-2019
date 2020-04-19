@@ -43,7 +43,7 @@ fn criteria_non_descending(num: u32) -> bool {
 pub fn count_valid_options() -> u32 {
 	(input::LOWER..=input::UPPER)
 		.filter(|n| {
-			// We don't _really_ need the first two sice we're already iterating over 6-digit in-range numbers.
+			// We don't _really_ need the first two since we're already iterating over 6-digit in-range numbers.
 			criteria_six_digits(*n)
 				&& criteria_in_range(*n)
 				&& criteria_two_same(*n)
@@ -55,7 +55,7 @@ pub fn count_valid_options() -> u32 {
 pub fn count_valid_options_strictly() -> u32 {
 	(input::LOWER..=input::UPPER)
 		.filter(|n| {
-			// We don't _really_ need the first two sice we're already iterating over 6-digit in-range numbers.
+			// We don't _really_ need the first two since we're already iterating over 6-digit in-range numbers.
 			criteria_six_digits(*n)
 				&& criteria_in_range(*n)
 				&& criteria_two_same_strictly(*n)

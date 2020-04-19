@@ -24,5 +24,13 @@
 		{
 			"path": "day08"
 		}
-	]
+	],
+	"settings": {
+		"cSpell.words": [
+			"Intcode",
+			"Mult",
+			"bytecount",
+			"clippy"
+		]
+	}
 }

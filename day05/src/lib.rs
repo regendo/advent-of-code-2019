@@ -386,7 +386,7 @@ pub fn jump_non_zero(
 	Ok(())
 }
 
-/// "[R]estore the [...] program [...] to the "1202 program alarm" state it had just before the last computer caught fire."
+/// "Restore the [...] program [...] to the "1202 program alarm" state it had just before the last computer caught fire."
 pub fn restore_to_alarm_state(program: &mut [i32]) {
 	program[1] = 12;
 	program[2] = 2;
