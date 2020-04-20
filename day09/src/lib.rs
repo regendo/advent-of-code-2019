@@ -1,6 +1,10 @@
 use std::fs;
 use std::io::{BufRead, Write};
 
+pub struct State {
+	relative_base: i32,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Opcode {
 	Add,
@@ -60,6 +64,7 @@ pub enum IntcodeError {
 pub enum ParameterMode {
 	Position,
 	Immediate,
+	Relative,
 }
 
 impl ParameterMode {
@@ -67,6 +72,7 @@ impl ParameterMode {
 		match code % 10 {
 			0 => Ok(ParameterMode::Position),
 			1 => Ok(ParameterMode::Immediate),
+			2 => Ok(ParameterMode::Relative),
 			_ => Err(IntcodeError::UnknownParameterMode(code % 10)),
 		}
 	}
@@ -130,6 +136,7 @@ where
 	W: Write,
 {
 	let mut idx: usize = 0;
+	let mut state = State { relative_base: 0 };
 
 	loop {
 		let prev_idx = idx;
@@ -140,15 +147,15 @@ where
 
 		let (opcode, modes) = parse_instruction(instruction as u32)?;
 		match opcode {
-			Opcode::Add => add(program, idx, &modes)?,
-			Opcode::Mult => mult(program, idx, &modes)?,
-			Opcode::Input => input(program, idx, &modes, &mut reader)?,
-			Opcode::Output => output(program, idx, &modes, &mut writer)?,
+			Opcode::Add => add(program, idx, &modes, &state)?,
+			Opcode::Mult => mult(program, idx, &modes, &state)?,
+			Opcode::Input => input(program, idx, &modes, &mut reader, &state)?,
+			Opcode::Output => output(program, idx, &modes, &mut writer, &state)?,
 			Opcode::Halt => return Ok(()),
-			Opcode::CompareEq => compare_eq(program, idx, &modes)?,
-			Opcode::CompareLt => compare_lt(program, idx, &modes)?,
-			Opcode::JumpZero => jump_zero(program, &mut idx, &modes)?,
-			Opcode::JumpNonZero => jump_non_zero(program, &mut idx, &modes)?,
+			Opcode::CompareEq => compare_eq(program, idx, &modes, &state)?,
+			Opcode::CompareLt => compare_lt(program, idx, &modes, &state)?,
+			Opcode::JumpZero => jump_zero(program, &mut idx, &modes, &state)?,
+			Opcode::JumpNonZero => jump_non_zero(program, &mut idx, &modes, &state)?,
 		}
 		if prev_idx == idx {
 			// don't move our instruction pointer if we jumped
@@ -188,14 +195,14 @@ fn parse_parameter(
 	param: i32,
 	mode: Option<&ParameterMode>,
 	program: &[i32],
+	state: &State,
 ) -> Result<i32, IntcodeError> {
 	match mode {
 		Some(ParameterMode::Immediate) => Ok(param),
-		Some(ParameterMode::Position) => {
-			if param < 0 {
-				Err(IntcodeError::InvalidAddress(param))
-			} else {
-				Ok(program[param as usize])
+		Some(ParameterMode::Position) | Some(ParameterMode::Relative) => {
+			match parse_address_parameter(param, mode, state) {
+				Ok(pos) => Ok(program[pos]),
+				Err(e) => Err(e),
 			}
 		}
 		None => Err(IntcodeError::TooFewParameterModes),
@@ -205,15 +212,26 @@ fn parse_parameter(
 fn parse_address_parameter(
 	param: i32,
 	mode: Option<&ParameterMode>,
+	state: &State,
 ) -> Result<usize, IntcodeError> {
-	if let Some(ParameterMode::Position) = mode {
-		if param < 0 {
-			Err(IntcodeError::InvalidAddress(param))
-		} else {
-			Ok(param as usize)
+	match mode {
+		Some(ParameterMode::Position) => {
+			if param < 0 {
+				Err(IntcodeError::InvalidAddress(param))
+			} else {
+				Ok(param as usize)
+			}
 		}
-	} else {
-		Err(IntcodeError::WrongParameterMode)
+		Some(ParameterMode::Relative) => {
+			let pos = param + state.relative_base;
+			if pos < 0 {
+				Err(IntcodeError::InvalidAddress(pos))
+			} else {
+				Ok(pos as usize)
+			}
+		}
+		Some(ParameterMode::Immediate) => Err(IntcodeError::WrongParameterMode),
+		None => Err(IntcodeError::TooFewParameterModes),
 	}
 }
 
@@ -221,20 +239,12 @@ fn parse_jump_parameter(
 	param: i32,
 	mode: Option<&ParameterMode>,
 	program: &[i32],
+	state: &State,
 ) -> Result<usize, IntcodeError> {
-	if param < 0 {
-		return Err(IntcodeError::InvalidAddress(param));
-	}
-	let param = param as usize;
-	if let Some(ParameterMode::Immediate) = mode {
-		Ok(param)
-	} else {
-		let address = program[param];
-		if address < 0 {
-			Err(IntcodeError::InvalidAddress(address))
-		} else {
-			Ok(address as usize)
-		}
+	match parse_parameter(param, mode, program, state) {
+		Ok(n) if n < 0 => Err(IntcodeError::InvalidAddress(n)),
+		Ok(n) => Ok(n as usize),
+		Err(e) => Err(e),
 	}
 }
 
@@ -251,13 +261,13 @@ fn parse_jump_parameter(
 /// add(&mut program, idx, &modes).unwrap();
 /// assert_eq!(program, [3, 1, 4, 1, 2]);
 /// ```
-pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(), IntcodeError> {
+pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
-	let b = parse_parameter(param_b, modes.next(), program)?;
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
+	let b = parse_parameter(param_b, modes.next(), program, state)?;
+	let target = parse_address_parameter(param_target, modes.next(), state)?;
 	program[target] = a + b;
 	Ok(())
 }
@@ -275,13 +285,13 @@ pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(
 /// mult(&mut program, idx, &modes).unwrap();
 /// assert_eq!(program, [3, 2, 6, 1, 2]);
 /// ```
-pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode]) -> Result<(), IntcodeError> {
+pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
-	let b = parse_parameter(param_b, modes.next(), program)?;
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
+	let b = parse_parameter(param_b, modes.next(), program, state)?;
+	let target = parse_address_parameter(param_target, modes.next(), state)?;
 	program[target] = a * b;
 	Ok(())
 }
@@ -291,6 +301,7 @@ pub fn output<W>(
 	idx: usize,
 	modes: &[ParameterMode],
 	mut writer: W,
+	state: &State
 ) -> Result<(), IntcodeError>
 where
 	W: Write,
@@ -298,7 +309,7 @@ where
 	let param_a = program[idx + 1];
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
 	writeln!(&mut writer, "{}", a).expect("Can't write to output!");
 	Ok(())
 }
@@ -308,6 +319,7 @@ pub fn input<R>(
 	idx: usize,
 	modes: &[ParameterMode],
 	mut reader: R,
+	state: &State
 ) -> Result<(), IntcodeError>
 where
 	R: BufRead,
@@ -315,7 +327,7 @@ where
 	let param_target = program[idx + 1];
 	let mut modes = modes.iter();
 
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let target = parse_address_parameter(param_target, modes.next(), state)?;
 	let mut input = String::new();
 	reader.read_line(&mut input).unwrap();
 	let num = input.trim().parse::<i32>().unwrap();
@@ -328,13 +340,14 @@ pub fn compare_eq(
 	program: &mut [i32],
 	idx: usize,
 	modes: &[ParameterMode],
+	state: &State
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
-	let b = parse_parameter(param_b, modes.next(), program)?;
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
+	let b = parse_parameter(param_b, modes.next(), program, state)?;
+	let target = parse_address_parameter(param_target, modes.next(), state)?;
 	program[target] = if a == b { 1 } else { 0 };
 	Ok(())
 }
@@ -343,13 +356,14 @@ pub fn compare_lt(
 	program: &mut [i32],
 	idx: usize,
 	modes: &[ParameterMode],
+	state: &State
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
-	let b = parse_parameter(param_b, modes.next(), program)?;
-	let target = parse_address_parameter(param_target, modes.next())?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
+	let b = parse_parameter(param_b, modes.next(), program, state)?;
+	let target = parse_address_parameter(param_target, modes.next(), state)?;
 	program[target] = if a < b { 1 } else { 0 };
 	Ok(())
 }
@@ -358,12 +372,13 @@ pub fn jump_zero(
 	program: &mut [i32],
 	idx: &mut usize,
 	modes: &[ParameterMode],
+	state: &State
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_target) = (program[*idx + 1], program[*idx + 2]);
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
-	let target = parse_jump_parameter(param_target, modes.next(), program)?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
+	let target = parse_jump_parameter(param_target, modes.next(), program, state)?;
 	if a == 0 {
 		*idx = target;
 	}
@@ -374,12 +389,13 @@ pub fn jump_non_zero(
 	program: &mut [i32],
 	idx: &mut usize,
 	modes: &[ParameterMode],
+	state: &State
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_target) = (program[*idx + 1], program[*idx + 2]);
 	let mut modes = modes.iter();
 
-	let a = parse_parameter(param_a, modes.next(), program)?;
-	let target = parse_jump_parameter(param_target, modes.next(), program)?;
+	let a = parse_parameter(param_a, modes.next(), program, state)?;
+	let target = parse_jump_parameter(param_target, modes.next(), program, state)?;
 	if a != 0 {
 		*idx = target;
 	}
