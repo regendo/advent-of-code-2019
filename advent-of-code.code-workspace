@@ -23,14 +23,12 @@
 		},
 		{
 			"path": "day08"
+		},
+		{
+			"path": "day09"
 		}
 	],
 	"settings": {
-		"cSpell.words": [
-			"Intcode",
-			"Mult",
-			"bytecount",
-			"clippy"
-		]
+		"cSpell.words": ["Intcode", "Mult", "bytecount", "clippy"]
 	}
 }
