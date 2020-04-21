@@ -140,6 +140,43 @@ pub fn load_program(file_path: &str, memory_size: usize) -> Result<Vec<i128>, st
 /// execute_program(&mut program, input, output).unwrap();
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
+/// 6.
+/// ```
+/// # use day09::execute_program;
+/// let original_program = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99];
+/// let mut program = Vec::new();
+/// program.extend_from_slice(&original_program);
+/// program.resize(0xFF, 0);
+/// let (input, mut output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, &mut output).unwrap();
+/// let output = String::from_utf8(output)
+/// 	.unwrap()
+/// 	.trim()
+/// 	.split('\n')
+/// 	.filter(|s| !s.is_empty())
+/// 	.map(|s| s.trim().parse::<i128>().unwrap())
+/// 	.collect::<Vec<i128>>();
+/// assert_eq!(output, original_program);
+/// ```
+/// 7.
+/// ```
+/// # use day09::execute_program;
+/// let mut program = [1102,34915192,34915192,7,4,7,99,0];
+/// let (input, mut output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, &mut output).unwrap();
+/// let output = String::from_utf8(output).unwrap();
+/// assert_eq!(output.trim().len(), 16);
+/// ```
+/// 8.
+/// ```
+/// # use day09::execute_program;
+/// let large_number = 1_125_899_906_842_624;
+/// let mut program = [104, large_number ,99];
+/// let (input, mut output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, &mut output).unwrap();
+/// let output = String::from_utf8(output).unwrap();
+/// assert_eq!(output.trim(), large_number.to_string());
+/// ```
 pub fn execute_program<R, W>(
 	program: &mut [i128],
 	mut reader: R,
@@ -277,7 +314,12 @@ fn parse_jump_parameter(
 /// add(&mut program, idx, &modes, &state).unwrap();
 /// assert_eq!(program, [3, 1, 4, 1, 2]);
 /// ```
-pub fn add(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
+pub fn add(
+	program: &mut [i128],
+	idx: usize,
+	modes: &[ParameterMode],
+	state: &State,
+) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
@@ -302,7 +344,12 @@ pub fn add(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &St
 /// mult(&mut program, idx, &modes, &state).unwrap();
 /// assert_eq!(program, [3, 2, 6, 1, 2]);
 /// ```
-pub fn mult(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
+pub fn mult(
+	program: &mut [i128],
+	idx: usize,
+	modes: &[ParameterMode],
+	state: &State,
+) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
@@ -318,7 +365,7 @@ pub fn output<W>(
 	idx: usize,
 	modes: &[ParameterMode],
 	mut writer: W,
-	state: &State
+	state: &State,
 ) -> Result<(), IntcodeError>
 where
 	W: Write,
@@ -336,7 +383,7 @@ pub fn input<R>(
 	idx: usize,
 	modes: &[ParameterMode],
 	mut reader: R,
-	state: &State
+	state: &State,
 ) -> Result<(), IntcodeError>
 where
 	R: BufRead,
@@ -357,7 +404,7 @@ pub fn compare_eq(
 	program: &mut [i128],
 	idx: usize,
 	modes: &[ParameterMode],
-	state: &State
+	state: &State,
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
@@ -373,7 +420,7 @@ pub fn compare_lt(
 	program: &mut [i128],
 	idx: usize,
 	modes: &[ParameterMode],
-	state: &State
+	state: &State,
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
@@ -389,7 +436,7 @@ pub fn jump_zero(
 	program: &mut [i128],
 	idx: &mut usize,
 	modes: &[ParameterMode],
-	state: &State
+	state: &State,
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_target) = (program[*idx + 1], program[*idx + 2]);
 	let mut modes = modes.iter();
@@ -406,7 +453,7 @@ pub fn jump_non_zero(
 	program: &mut [i128],
 	idx: &mut usize,
 	modes: &[ParameterMode],
-	state: &State
+	state: &State,
 ) -> Result<(), IntcodeError> {
 	let (param_a, param_target) = (program[*idx + 1], program[*idx + 2]);
 	let mut modes = modes.iter();
@@ -419,8 +466,13 @@ pub fn jump_non_zero(
 	Ok(())
 }
 
-fn adjust_relative_base(program: &[i128], idx: usize, modes: &[ParameterMode], state: &mut State) -> Result<(), IntcodeError> {
-	let param = program[idx+1];
+fn adjust_relative_base(
+	program: &[i128],
+	idx: usize,
+	modes: &[ParameterMode],
+	state: &mut State,
+) -> Result<(), IntcodeError> {
+	let param = program[idx + 1];
 	let mut modes = modes.iter();
 
 	let adjustment = parse_parameter(param, modes.next(), program, state)?;
