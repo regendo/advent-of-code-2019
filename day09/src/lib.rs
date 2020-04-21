@@ -4,6 +4,11 @@ use std::io::{BufRead, Write};
 pub struct State {
 	relative_base: i128,
 }
+impl State {
+	pub fn new() -> Self {
+		State { relative_base: 0 }
+	}
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Opcode {
@@ -97,37 +102,42 @@ pub fn load_program(file_path: &str, memory_size: usize) -> Result<Vec<i128>, st
 /// ## Examples
 /// 1.
 /// ```
-/// # use day05::execute_program;
+/// # use day09::execute_program;
 /// let mut program = [1,0,0,0,99];
-/// execute_program(&mut program).unwrap();
+/// let (input, output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, output).unwrap();
 /// assert_eq!(program, [2,0,0,0,99]);
 /// ```
 /// 2.
 /// ```
-/// # use day05::execute_program;
+/// # use day09::execute_program;
 /// let mut program = [2,3,0,3,99];
-/// execute_program(&mut program).unwrap();
+/// let (input, output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, output).unwrap();
 /// assert_eq!(program, [2,3,0,6,99]);
 /// ```
 /// 3.
 /// ```
-/// # use day05::execute_program;
+/// # use day09::execute_program;
 /// let mut program = [2,4,4,5,99,0];
-/// execute_program(&mut program).unwrap();
+/// let (input, output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, output).unwrap();
 /// assert_eq!(program, [2,4,4,5,99,9801]);
 /// ```
 /// 4.
 /// ```
-/// # use day05::execute_program;
+/// # use day09::execute_program;
 /// let mut program = [1,1,1,4,99,5,6,0,99];
-/// execute_program(&mut program).unwrap();
+/// let (input, output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, output).unwrap();
 /// assert_eq!(program, [30,1,1,4,2,5,6,0,99]);
 /// ```
 /// 5.
 /// ```
-/// # use day05::execute_program;
+/// # use day09::execute_program;
 /// let mut program = [1,9,10,3,2,3,11,0,99,30,40,50];
-/// execute_program(&mut program).unwrap();
+/// let (input, output) = ("".as_bytes(), vec![]);
+/// execute_program(&mut program, input, output).unwrap();
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
 pub fn execute_program<R, W>(
@@ -140,7 +150,7 @@ where
 	W: Write,
 {
 	let mut idx: usize = 0;
-	let mut state = State { relative_base: 0 };
+	let mut state = State::new();
 
 	loop {
 		let prev_idx = idx;
@@ -175,7 +185,7 @@ where
 ///
 /// ## Examples
 /// ```
-/// # use day05::{parse_instruction, Opcode, ParameterMode};
+/// # use day09::{parse_instruction, Opcode, ParameterMode};
 /// let (op, modes) = parse_instruction(1002).unwrap();
 /// assert_eq!(op, Opcode::Mult);
 /// assert_eq!(modes, vec![ParameterMode::Position, ParameterMode::Immediate, ParameterMode::Position]);
@@ -258,12 +268,13 @@ fn parse_jump_parameter(
 /// ## Examples
 ///
 /// ```
-/// # use day05::{add, parse_instruction};
+/// # use day09::{add, parse_instruction, State};
 /// let mut program = [3, 1, 0, 1, 2];
+/// let state = State::new();
 /// let idx = 1;
 /// let (_, modes) = parse_instruction(program[idx] as u128).unwrap();
 ///
-/// add(&mut program, idx, &modes).unwrap();
+/// add(&mut program, idx, &modes, &state).unwrap();
 /// assert_eq!(program, [3, 1, 4, 1, 2]);
 /// ```
 pub fn add(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
@@ -282,12 +293,13 @@ pub fn add(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &St
 /// ## Examples
 ///
 /// ```
-/// # use day05::{mult, parse_instruction};
+/// # use day09::{mult, parse_instruction, State};
 /// let mut program = [3, 2, 0, 1, 2];
+/// let state = State::new();
 /// let idx = 1;
 /// let (_, modes) = parse_instruction(program[idx] as u128).unwrap();
 ///
-/// mult(&mut program, idx, &modes).unwrap();
+/// mult(&mut program, idx, &modes, &state).unwrap();
 /// assert_eq!(program, [3, 2, 6, 1, 2]);
 /// ```
 pub fn mult(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
