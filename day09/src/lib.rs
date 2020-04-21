@@ -81,13 +81,14 @@ impl ParameterMode {
 	}
 }
 
-pub fn load_program(file_path: &str) -> Result<Vec<i32>, std::io::Error> {
+pub fn load_program(file_path: &str, memory_size: usize) -> Result<Vec<i32>, std::io::Error> {
 	let file = fs::read_to_string(file_path)?;
-	let program = file
+	let mut program = file
 		.trim()
 		.split(',')
 		.map(|s| s.parse::<i32>().unwrap())
-		.collect();
+		.collect::<Vec<i32>>();
+	program.resize(memory_size, 0);
 	Ok(program)
 }
 
