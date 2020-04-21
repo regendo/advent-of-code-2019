@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{BufRead, Write};
 
 pub struct State {
-	relative_base: i32,
+	relative_base: i128,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -20,7 +20,7 @@ pub enum Opcode {
 }
 
 impl Opcode {
-	fn new(code: u32) -> Result<Opcode, IntcodeError> {
+	fn new(code: u128) -> Result<Opcode, IntcodeError> {
 		match code {
 			1 => Ok(Opcode::Add),
 			2 => Ok(Opcode::Mult),
@@ -36,7 +36,7 @@ impl Opcode {
 		}
 	}
 
-	fn param_count(self) -> u32 {
+	fn param_count(self) -> usize {
 		match self {
 			Opcode::Add => 3,
 			Opcode::Mult => 3,
@@ -54,11 +54,11 @@ impl Opcode {
 
 #[derive(Debug)]
 pub enum IntcodeError {
-	UnknownOpcode(u32),
-	UnknownParameterMode(u32),
-	ExcessiveParameterModes(u32),
-	NegativeInstructionValue(i32),
-	InvalidAddress(i32),
+	UnknownOpcode(u128),
+	UnknownParameterMode(u128),
+	ExcessiveParameterModes(u128),
+	NegativeInstructionValue(i128),
+	InvalidAddress(i128),
 	TooFewParameterModes,
 	WrongParameterMode,
 }
@@ -71,7 +71,7 @@ pub enum ParameterMode {
 }
 
 impl ParameterMode {
-	fn new(code: u32) -> Result<ParameterMode, IntcodeError> {
+	fn new(code: u128) -> Result<ParameterMode, IntcodeError> {
 		match code % 10 {
 			0 => Ok(ParameterMode::Position),
 			1 => Ok(ParameterMode::Immediate),
@@ -81,13 +81,13 @@ impl ParameterMode {
 	}
 }
 
-pub fn load_program(file_path: &str, memory_size: usize) -> Result<Vec<i32>, std::io::Error> {
+pub fn load_program(file_path: &str, memory_size: usize) -> Result<Vec<i128>, std::io::Error> {
 	let file = fs::read_to_string(file_path)?;
 	let mut program = file
 		.trim()
 		.split(',')
-		.map(|s| s.parse::<i32>().unwrap())
-		.collect::<Vec<i32>>();
+		.map(|s| s.parse::<i128>().unwrap())
+		.collect::<Vec<i128>>();
 	program.resize(memory_size, 0);
 	Ok(program)
 }
@@ -131,7 +131,7 @@ pub fn load_program(file_path: &str, memory_size: usize) -> Result<Vec<i32>, std
 /// assert_eq!(program, [3500,9,10,70,2,3,11,0,99,30,40,50]);
 /// ```
 pub fn execute_program<R, W>(
-	program: &mut [i32],
+	program: &mut [i128],
 	mut reader: R,
 	mut writer: W,
 ) -> Result<(), IntcodeError>
@@ -149,7 +149,7 @@ where
 			return Err(IntcodeError::NegativeInstructionValue(instruction));
 		}
 
-		let (opcode, modes) = parse_instruction(instruction as u32)?;
+		let (opcode, modes) = parse_instruction(instruction as u128)?;
 		match opcode {
 			Opcode::Add => add(program, idx, &modes, &state)?,
 			Opcode::Mult => mult(program, idx, &modes, &state)?,
@@ -180,7 +180,7 @@ where
 /// assert_eq!(op, Opcode::Mult);
 /// assert_eq!(modes, vec![ParameterMode::Position, ParameterMode::Immediate, ParameterMode::Position]);
 /// ```
-pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>), IntcodeError> {
+pub fn parse_instruction(instruction: u128) -> Result<(Opcode, Vec<ParameterMode>), IntcodeError> {
 	let (op_num, mut par_num) = (instruction % 100, instruction / 100);
 	let op = Opcode::new(op_num)?;
 	let mut modes = Vec::with_capacity(op.param_count() as usize);
@@ -197,11 +197,11 @@ pub fn parse_instruction(instruction: u32) -> Result<(Opcode, Vec<ParameterMode>
 }
 
 fn parse_parameter(
-	param: i32,
+	param: i128,
 	mode: Option<&ParameterMode>,
-	program: &[i32],
+	program: &[i128],
 	state: &State,
-) -> Result<i32, IntcodeError> {
+) -> Result<i128, IntcodeError> {
 	match mode {
 		Some(ParameterMode::Immediate) => Ok(param),
 		Some(ParameterMode::Position) | Some(ParameterMode::Relative) => {
@@ -215,7 +215,7 @@ fn parse_parameter(
 }
 
 fn parse_address_parameter(
-	param: i32,
+	param: i128,
 	mode: Option<&ParameterMode>,
 	state: &State,
 ) -> Result<usize, IntcodeError> {
@@ -241,9 +241,9 @@ fn parse_address_parameter(
 }
 
 fn parse_jump_parameter(
-	param: i32,
+	param: i128,
 	mode: Option<&ParameterMode>,
-	program: &[i32],
+	program: &[i128],
 	state: &State,
 ) -> Result<usize, IntcodeError> {
 	match parse_parameter(param, mode, program, state) {
@@ -261,12 +261,12 @@ fn parse_jump_parameter(
 /// # use day05::{add, parse_instruction};
 /// let mut program = [3, 1, 0, 1, 2];
 /// let idx = 1;
-/// let (_, modes) = parse_instruction(program[idx] as u32).unwrap();
+/// let (_, modes) = parse_instruction(program[idx] as u128).unwrap();
 ///
 /// add(&mut program, idx, &modes).unwrap();
 /// assert_eq!(program, [3, 1, 4, 1, 2]);
 /// ```
-pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
+pub fn add(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
@@ -285,12 +285,12 @@ pub fn add(program: &mut [i32], idx: usize, modes: &[ParameterMode], state: &Sta
 /// # use day05::{mult, parse_instruction};
 /// let mut program = [3, 2, 0, 1, 2];
 /// let idx = 1;
-/// let (_, modes) = parse_instruction(program[idx] as u32).unwrap();
+/// let (_, modes) = parse_instruction(program[idx] as u128).unwrap();
 ///
 /// mult(&mut program, idx, &modes).unwrap();
 /// assert_eq!(program, [3, 2, 6, 1, 2]);
 /// ```
-pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
+pub fn mult(program: &mut [i128], idx: usize, modes: &[ParameterMode], state: &State) -> Result<(), IntcodeError> {
 	let (param_a, param_b, param_target) = (program[idx + 1], program[idx + 2], program[idx + 3]);
 	let mut modes = modes.iter();
 
@@ -302,7 +302,7 @@ pub fn mult(program: &mut [i32], idx: usize, modes: &[ParameterMode], state: &St
 }
 
 pub fn output<W>(
-	program: &mut [i32],
+	program: &mut [i128],
 	idx: usize,
 	modes: &[ParameterMode],
 	mut writer: W,
@@ -320,7 +320,7 @@ where
 }
 
 pub fn input<R>(
-	program: &mut [i32],
+	program: &mut [i128],
 	idx: usize,
 	modes: &[ParameterMode],
 	mut reader: R,
@@ -335,14 +335,14 @@ where
 	let target = parse_address_parameter(param_target, modes.next(), state)?;
 	let mut input = String::new();
 	reader.read_line(&mut input).unwrap();
-	let num = input.trim().parse::<i32>().unwrap();
+	let num = input.trim().parse::<i128>().unwrap();
 
 	program[target] = num;
 	Ok(())
 }
 
 pub fn compare_eq(
-	program: &mut [i32],
+	program: &mut [i128],
 	idx: usize,
 	modes: &[ParameterMode],
 	state: &State
@@ -358,7 +358,7 @@ pub fn compare_eq(
 }
 
 pub fn compare_lt(
-	program: &mut [i32],
+	program: &mut [i128],
 	idx: usize,
 	modes: &[ParameterMode],
 	state: &State
@@ -374,7 +374,7 @@ pub fn compare_lt(
 }
 
 pub fn jump_zero(
-	program: &mut [i32],
+	program: &mut [i128],
 	idx: &mut usize,
 	modes: &[ParameterMode],
 	state: &State
@@ -391,7 +391,7 @@ pub fn jump_zero(
 }
 
 pub fn jump_non_zero(
-	program: &mut [i32],
+	program: &mut [i128],
 	idx: &mut usize,
 	modes: &[ParameterMode],
 	state: &State
@@ -407,7 +407,7 @@ pub fn jump_non_zero(
 	Ok(())
 }
 
-fn adjust_relative_base(program: &[i32], idx: usize, modes: &[ParameterMode], state: &mut State) -> Result<(), IntcodeError> {
+fn adjust_relative_base(program: &[i128], idx: usize, modes: &[ParameterMode], state: &mut State) -> Result<(), IntcodeError> {
 	let param = program[idx+1];
 	let mut modes = modes.iter();
 
@@ -417,20 +417,20 @@ fn adjust_relative_base(program: &[i32], idx: usize, modes: &[ParameterMode], st
 }
 
 /// "Restore the [...] program [...] to the "1202 program alarm" state it had just before the last computer caught fire."
-pub fn restore_to_alarm_state(program: &mut [i32]) {
+pub fn restore_to_alarm_state(program: &mut [i128]) {
 	program[1] = 12;
 	program[2] = 2;
 }
 
 pub struct Inputs {
-	pub noun: i32,
-	pub verb: i32,
+	pub noun: i128,
+	pub verb: i128,
 }
 
 /// Attempt to find a pair of inputs for addresses 1, 2 that produce the expected output.
 pub fn find_correct_inputs<R, W>(
-	program: &[i32],
-	expected: i32,
+	program: &[i128],
+	expected: i128,
 	mut reader: R,
 	mut writer: W,
 ) -> Option<Inputs>
