@@ -16,6 +16,7 @@ pub enum Opcode {
 	JumpNonZero,
 	CompareEq,
 	CompareLt,
+	AdjustRelBase,
 }
 
 impl Opcode {
@@ -29,6 +30,7 @@ impl Opcode {
 			6 => Ok(Opcode::JumpZero),
 			7 => Ok(Opcode::CompareLt),
 			8 => Ok(Opcode::CompareEq),
+			9 => Ok(Opcode::AdjustRelBase),
 			99 => Ok(Opcode::Halt),
 			_ => Err(IntcodeError::UnknownOpcode(code)),
 		}
@@ -45,6 +47,7 @@ impl Opcode {
 			Opcode::JumpZero => 2,
 			Opcode::CompareEq => 3,
 			Opcode::CompareLt => 3,
+			Opcode::AdjustRelBase => 1,
 		}
 	}
 }
@@ -156,6 +159,7 @@ where
 			Opcode::CompareLt => compare_lt(program, idx, &modes, &state)?,
 			Opcode::JumpZero => jump_zero(program, &mut idx, &modes, &state)?,
 			Opcode::JumpNonZero => jump_non_zero(program, &mut idx, &modes, &state)?,
+			Opcode::AdjustRelBase => adjust_relative_base(program, idx, &modes, &mut state)?,
 		}
 		if prev_idx == idx {
 			// don't move our instruction pointer if we jumped
@@ -399,6 +403,15 @@ pub fn jump_non_zero(
 	if a != 0 {
 		*idx = target;
 	}
+	Ok(())
+}
+
+fn adjust_relative_base(program: &[i32], idx: usize, modes: &[ParameterMode], state: &mut State) -> Result<(), IntcodeError> {
+	let param = program[idx+1];
+	let mut modes = modes.iter();
+
+	let adjustment = parse_parameter(param, modes.next(), program, state)?;
+	state.relative_base += adjustment;
 	Ok(())
 }
 
