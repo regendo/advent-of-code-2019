@@ -148,28 +148,31 @@ impl Vec2D {
 	/// ```
 	/// # use day10::Vec2D;
 	/// let arrow = Vec2D(-1, 0); // straight left
-	/// assert_eq!(arrow.angle(), 90.0);
+	/// assert_eq!(arrow.angle(), 270.0);
 	/// ```
 	///
 	/// ```
 	/// # use day10::Vec2D;
 	/// let arrow = Vec2D(1, 1); // bottom right "corner"
-	/// assert_eq!(arrow.angle(), 180.0 + 45.0);
+	/// assert_eq!(arrow.angle(), 90.0 + 45.0);
 	/// ```
 	pub fn angle(self) -> f32 {
-		// in my vectors, positive x is rightwards and positive y is downwards
-		// in a normal coordinate system, positive y would be upwards instead
+		// In my vectors, positive x is rightwards and positive y is downwards.
+		// In a normal coordinate system, positive y would be upwards instead.
 		let x = self.0 as f32;
 		let y = -self.1 as f32;
 
-		// the angle between two points is easily calculated with arctan2
+		// Here's a nice diagram. https://math.stackexchange.com/a/2587852
+		// The angle between two points is easily calculated with arctan2
 		let angle = (y.atan2(x)
 			// however, that is with 0 at the right, not the top
-			+ std::f32::consts::FRAC_PI_2)
+			- std::f32::consts::FRAC_PI_2)
+			// going counter-clockwise
+			* -1.0
 			// and in radians from -pi to +pi instead of angles
 			* 180.0 / std::f32::consts::PI
 			// which we want to go from 0 to 360 degrees
-			+ 180.0;
+			+ 360.0;
 
 		angle % 360.0
 	}
