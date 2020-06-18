@@ -412,7 +412,7 @@ mod tests {
 		assert_eq!(laser.next(), Some(Point2D(12, 1)));
 		assert_eq!(laser.next(), Some(Point2D(12, 2)));
 		laser.nth(5); // skip 6
-		assert_eq!(laser.next(), Some(Point2D(12, 18)));
+		assert_eq!(laser.next(), Some(Point2D(12, 8)));
 		laser.nth(8); // skip 8
 		assert_eq!(laser.next(), Some(Point2D(16, 0)));
 		laser.nth(28);
