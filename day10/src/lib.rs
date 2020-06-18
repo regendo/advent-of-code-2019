@@ -50,10 +50,10 @@ impl Point2D {
 	/// 	];
 	/// let points = Point2D::from_asteroid_map(map);
 	/// assert_eq!(points, [
-	/// 	Point2D(0, 1), Point2D(0, 4),
-	/// 	Point2D(2, 0), Point2D(2, 1), Point2D(2, 2), Point2D(2, 3), Point2D(2, 4),
-	/// 	Point2D(3, 4),
-	/// 	Point2D(4, 3), Point2D(4, 4)
+	/// 	Point2D(1, 0), Point2D(4, 0),
+	/// 	Point2D(0, 2), Point2D(1, 2), Point2D(2, 2), Point2D(3, 2), Point2D(4, 2),
+	/// 	Point2D(4, 3),
+	/// 	Point2D(3, 4), Point2D(4, 4)
 	/// ]);
 	/// ```
 	pub fn from_asteroid_map<'a, I>(map: I) -> Vec<Self>
@@ -62,10 +62,10 @@ impl Point2D {
 	{
 		map.into_iter()
 			.enumerate()
-			.map(|(x, line)| {
+			.map(|(y, line)| {
 				line
 					.char_indices()
-					.filter_map(move |(y, c)| if c == '#' { Some(Point2D(x, y)) } else { None })
+					.filter_map(move |(x, c)| if c == '#' { Some(Point2D(x, y)) } else { None })
 			})
 			.flatten()
 			.collect()
