@@ -23,7 +23,20 @@ impl Point2D {
 
 	/// Return only the points that are visible from this point in 2D space.
 	/// That is, they are not the same as this point and they are not behind another point that is blocking a direct line of sight.
-	// pub fn filter_visible(&self, others: &[Point2D]) -> &[Point2D] {}
+	pub fn filter_visible(&self, others: &[Point2D]) -> Vec<Point2D> {
+		let with_distances: Vec<(Point2D, Vec2D)> =
+			others.iter().map(|p| (*p, self.distance_to(*p))).collect();
+		with_distances
+			.iter()
+			.filter(|(p, d)| {
+				p != self
+					&& with_distances
+						.iter()
+						.all(|(_, dist)| !dist.is_multiple_of(*d))
+			})
+			.map(|(p, _)| *p)
+			.collect::<Vec<Point2D>>()
+	}
 
 	/// Create a number of points from a 2D map where each `#` represents a point and the top left corner is the (0,0) coordinate.
 	/// # Example
@@ -112,9 +125,21 @@ impl Vec2D {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use super::*;
+#[cfg(test)]
+mod tests {
+	use super::*;
 
-// 	// #[test]
-// }
+	#[test]
+	fn filters_correct_asteroids() {
+		let map = vec![".#..#", ".....", "#####", "....#", "...##"];
+		let points = Point2D::from_asteroid_map(map);
+
+		assert_eq!(
+			points
+				.iter()
+				.map(|p| p.filter_visible(&points).len())
+				.collect::<Vec<usize>>(),
+			[7, 7, 6, 7, 7, 7, 5, 7, 8, 7]
+		);
+	}
+}
