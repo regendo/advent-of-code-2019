@@ -2,7 +2,6 @@
 pub struct Point2D(pub usize, pub usize);
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-
 pub struct Vec2D(pub i32, pub i32);
 
 impl Point2D {
@@ -14,7 +13,7 @@ impl Point2D {
 	/// let b = Point2D(2, 5);
 	/// assert_eq!(a.distance_to(b), Vec2D(-2, 1));
 	/// ```
-	pub fn distance_to(&self, other: Point2D) -> Vec2D {
+	pub fn distance_to(&self, other: Self) -> Vec2D {
 		Vec2D(
 			other.0 as i32 - self.0 as i32,
 			other.1 as i32 - self.1 as i32,
@@ -23,7 +22,7 @@ impl Point2D {
 
 	/// Return only the points that are visible from this point in 2D space.
 	/// That is, they are not the same as this point and they are not behind another point that is blocking a direct line of sight.
-	pub fn filter_visible(&self, others: &[Point2D]) -> Vec<Point2D> {
+	pub fn filter_visible(&self, others: &[Self]) -> Vec<Self> {
 		let with_distances: Vec<(Point2D, Vec2D)> =
 			others.iter().map(|p| (*p, self.distance_to(*p))).collect();
 		with_distances
@@ -57,7 +56,7 @@ impl Point2D {
 	/// 	Point2D(4, 3), Point2D(4, 4)
 	/// ]);
 	/// ```
-	pub fn from_asteroid_map<'a, I>(map: I) -> Vec<Point2D>
+	pub fn from_asteroid_map<'a, I>(map: I) -> Vec<Self>
 	where
 		I: IntoIterator<Item = &'a str>,
 	{
@@ -70,6 +69,14 @@ impl Point2D {
 			})
 			.flatten()
 			.collect()
+	}
+
+	/// Find the point that has the highest amounts of direct lines of sights to other points.
+	pub fn with_highest_visibility(points: &[Self]) -> Option<Self> {
+		points
+			.iter()
+			.max_by_key(|p| p.filter_visible(points).len())
+			.map(|p| *p)
 	}
 }
 
@@ -108,7 +115,7 @@ impl Vec2D {
 	/// # use day10::Vec2D;
 	/// assert_eq!(false, Vec2D(-4, -2).is_multiple_of(Vec2D(2, 1)));
 	/// ```
-	pub fn is_multiple_of(self, other: Vec2D) -> bool {
+	pub fn is_multiple_of(self, other: Self) -> bool {
 		match (self, other) {
 			(Vec2D(0, a), Vec2D(0, b)) => a.abs() > b.abs() && a.signum() == b.signum(),
 			(Vec2D(a, 0), Vec2D(b, 0)) => a.abs() > b.abs() && a.signum() == b.signum(),
@@ -141,5 +148,110 @@ mod tests {
 				.collect::<Vec<usize>>(),
 			[7, 7, 6, 7, 7, 7, 5, 7, 8, 7]
 		);
+	}
+
+	#[test]
+	fn max_is_at_3_4() {
+		let map = ".#..#
+		                            .....
+		                            #####
+		                            ....#
+		                            ...##"
+			.split_whitespace();
+		let points = &Point2D::from_asteroid_map(map);
+
+		let selected = Point2D::with_highest_visibility(points);
+		assert_eq!(Some(8), selected.map(|p| p.filter_visible(points).len()));
+		assert_eq!(Some(Point2D(3, 4)), selected);
+	}
+
+	#[test]
+	fn max_is_at_5_8() {
+		let map = "......#.#.
+		                            #..#.#....
+		                            ..#######.
+		                            .#.#.###..
+		                            .#..#.....
+		                            ..#....#.#
+		                            #..#....#.
+		                            .##.#..###
+		                            ##...#..#.
+											 .#....####"
+			.split_whitespace();
+		let points = &Point2D::from_asteroid_map(map);
+
+		let selected = Point2D::with_highest_visibility(points);
+		assert_eq!(Some(33), selected.map(|p| p.filter_visible(points).len()));
+		assert_eq!(Some(Point2D(5, 8)), selected);
+	}
+
+	#[test]
+	fn max_is_at_1_2() {
+		let map = "#.#...#.#.
+		                            .###....#.
+		                            .#....#...
+		                            ##.#.#.#.#
+		                            ....#.#.#.
+		                            .##..###.#
+		                            ..#...##..
+		                            ..##....##
+		                            ......#...
+		                            .####.###."
+			.split_whitespace();
+		let points = &Point2D::from_asteroid_map(map);
+
+		let selected = Point2D::with_highest_visibility(points);
+		assert_eq!(Some(35), selected.map(|p| p.filter_visible(points).len()));
+		assert_eq!(Some(Point2D(1, 2)), selected);
+	}
+
+	#[test]
+	fn max_is_at_6_3() {
+		let map = ".#..#..###
+		                            ####.###.#
+		                            ....###.#.
+		                            ..###.##.#
+		                            ##.##.#.#.
+		                            ....###..#
+		                            ..#.#..#.#
+		                            #..#.#.###
+		                            .##...##.#
+		                            .....#.#.."
+			.split_whitespace();
+		let points = &Point2D::from_asteroid_map(map);
+
+		let selected = Point2D::with_highest_visibility(points);
+		assert_eq!(Some(41), selected.map(|p| p.filter_visible(points).len()));
+		assert_eq!(Some(Point2D(6, 3)), selected);
+	}
+
+	#[test]
+	fn max_is_at_11_13() {
+		let map = ".#..##.###...#######
+		                            ##.############..##.
+		                            .#.######.########.#
+		                            .###.#######.####.#.
+		                            #####.##.#.##.###.##
+		                            ..#####..#.#########
+		                            ####################
+		                            #.####....###.#.#.##
+		                            ##.#################
+		                            #####.##.###..####..
+		                            ..######..##.#######
+		                            ####.##.####...##..#
+		                            .#####..#.######.###
+		                            ##...#.##########...
+		                            #.##########.#######
+		                            .####.#.###.###.#.##
+		                            ....##.##.###..#####
+		                            .#.#.###########.###
+		                            #.#.#.#####.####.###
+		                            ###.##.####.##.#..##"
+			.split_whitespace();
+		let points = &Point2D::from_asteroid_map(map);
+
+		let selected = Point2D::with_highest_visibility(points);
+		assert_eq!(Some(210), selected.map(|p| p.filter_visible(points).len()));
+		assert_eq!(Some(Point2D(11, 13)), selected);
 	}
 }
