@@ -32,6 +32,13 @@
 		}
 	],
 	"settings": {
-		"cSpell.words": ["Intcode", "Mult", "bytecount", "clippy"]
+		"cSpell.words": [
+			"Intcode",
+			"Mult",
+			"arctan",
+			"bytecount",
+			"clippy",
+			"consts"
+		]
 	}
 }
