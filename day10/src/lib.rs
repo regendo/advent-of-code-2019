@@ -172,9 +172,88 @@ impl Vec2D {
 			+ 180.0;
 
 		angle % 360.0
-}
+	}
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct Asteroid {
+	location: Point2D,
+	arrow: Vec2D,
+	angle: f32,
+}
+
+struct DestructorLaser {
+	_station: Point2D,
+	asteroids: Vec<Asteroid>,
+	current_target_index: Option<usize>,
+}
+
+impl DestructorLaser {
+	pub fn new(station: Point2D, asteroids: &[Point2D]) -> Self {
+		let mut asteroids = asteroids
+			.iter()
+			.filter_map(|a| {
+				if *a == station {
+					None
+				} else {
+					let arrow = station.distance_to(*a);
+					Some(Asteroid {
+						location: *a,
+						arrow,
+						angle: arrow.angle(),
+					})
+				}
+			})
+			.collect::<Vec<Asteroid>>();
+
+		asteroids.sort_unstable_by(|a, b| {
+			a.angle
+				.partial_cmp(&b.angle)
+				.map(|order| {
+					order.then_with(|| {
+						if a.arrow.is_multiple_of(b.arrow) {
+							std::cmp::Ordering::Greater
+						} else {
+							std::cmp::Ordering::Less
+						}
+					})
+				})
+				.unwrap()
+		});
+
+		let current_target_index = if asteroids.is_empty() { None } else { Some(0) };
+
+		Self {
+			_station: station,
+			asteroids,
+			current_target_index,
+		}
+	}
+}
+
+impl Iterator for DestructorLaser {
+	type Item = Asteroid;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if let Some(idx) = self.current_target_index {
+			let destroyed = self.asteroids.remove(idx);
+			self.asteroids.rotate_left(idx);
+
+			self.current_target_index = self
+				.asteroids
+				.iter()
+				.enumerate()
+				.skip_while(|(_, target)| target.angle <= destroyed.angle)
+				.next()
+				.map(|(idx, _)| idx)
+				.or(self.asteroids.first().map(|_| 0));
+
+			Some(destroyed)
+		} else {
+			None
+		}
+	}
+}
 
 #[cfg(test)]
 mod tests {
