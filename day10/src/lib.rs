@@ -232,7 +232,7 @@ impl DestructorLaser {
 }
 
 impl Iterator for DestructorLaser {
-	type Item = Asteroid;
+	type Item = Point2D;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if let Some(idx) = self.current_target_index {
@@ -248,7 +248,7 @@ impl Iterator for DestructorLaser {
 				.map(|(idx, _)| idx)
 				.or(self.asteroids.first().map(|_| 0));
 
-			Some(destroyed)
+			Some(destroyed.location)
 		} else {
 			None
 		}
@@ -376,5 +376,52 @@ mod tests {
 		let selected = Point2D::with_highest_visibility(points);
 		assert_eq!(Some(210), selected.map(|p| p.filter_visible(points).len()));
 		assert_eq!(Some(Point2D(11, 13)), selected);
+	}
+
+	#[test]
+	fn fire_laser_from_11_13() {
+		let map = ".#..##.###...#######
+		                            ##.############..##.
+		                            .#.######.########.#
+		                            .###.#######.####.#.
+		                            #####.##.#.##.###.##
+		                            ..#####..#.#########
+		                            ####################
+		                            #.####....###.#.#.##
+		                            ##.#################
+		                            #####.##.###..####..
+		                            ..######..##.#######
+		                            ####.##.####...##..#
+		                            .#####..#.######.###
+		                            ##...#.##########...
+		                            #.##########.#######
+		                            .####.#.###.###.#.##
+		                            ....##.##.###..#####
+		                            .#.#.###########.###
+		                            #.#.#.#####.####.###
+		                            ###.##.####.##.#..##"
+			.split_whitespace();
+		let asteroids = &Point2D::from_asteroid_map(map);
+		let station = Point2D::with_highest_visibility(asteroids).unwrap();
+		let mut laser = DestructorLaser::new(station, asteroids);
+
+		assert_eq!(laser.next(), Some(Point2D(11, 12)));
+		assert_eq!(laser.next(), Some(Point2D(12, 1)));
+		assert_eq!(laser.next(), Some(Point2D(12, 2)));
+		laser.nth(5); // skip 6
+		assert_eq!(laser.next(), Some(Point2D(12, 18)));
+		laser.nth(8); // skip 8
+		assert_eq!(laser.next(), Some(Point2D(16, 0)));
+		laser.nth(28);
+		assert_eq!(laser.next(), Some(Point2D(16, 9)));
+		laser.nth(48);
+		assert_eq!(laser.next(), Some(Point2D(10, 16)));
+		laser.nth(97);
+		assert_eq!(laser.next(), Some(Point2D(9, 6)));
+		assert_eq!(laser.next(), Some(Point2D(8, 2)));
+		assert_eq!(laser.next(), Some(Point2D(10, 9)));
+		laser.nth(96);
+		assert_eq!(laser.next(), Some(Point2D(11, 1)));
+		assert_eq!(laser.next(), None);
 	}
 }
