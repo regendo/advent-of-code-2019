@@ -185,7 +185,7 @@ pub struct Asteroid {
 	angle: f32,
 }
 
-struct DestructorLaser {
+pub struct DestructorLaser {
 	_station: Point2D,
 	asteroids: Vec<Asteroid>,
 	current_target_index: Option<usize>,
