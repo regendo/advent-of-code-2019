@@ -12,7 +12,7 @@ impl Point2D {
 	/// # use day10::{Point2D, Vec2D};
 	/// let a = Point2D(4, 4);
 	/// let b = Point2D(2, 5);
-	/// assert_eq!(a.distance_to(&b), Vec2D(-2, 1));
+	/// assert_eq!(a.distance_to(b), Vec2D(-2, 1));
 	/// ```
 	pub fn distance_to(&self, other: Point2D) -> Vec2D {
 		Vec2D(
@@ -65,7 +65,7 @@ impl Vec2D {
 	/// # Examples
 	/// ```
 	/// # use day10::Vec2D;
-	/// assert_eq!(true,  Vec2D(2, 3).is_multiple_of(Vec2D(2, 3)));
+	/// assert_eq!(false,  Vec2D(2, 3).is_multiple_of(Vec2D(2, 3)));
 	/// ```
 	/// ```
 	/// # use day10::Vec2D;
@@ -96,9 +96,6 @@ impl Vec2D {
 	/// assert_eq!(false, Vec2D(-4, -2).is_multiple_of(Vec2D(2, 1)));
 	/// ```
 	pub fn is_multiple_of(self, other: Vec2D) -> bool {
-		if self == other {
-			return true;
-		}
 		match (self, other) {
 			(Vec2D(0, a), Vec2D(0, b)) => a.abs() > b.abs() && a.signum() == b.signum(),
 			(Vec2D(a, 0), Vec2D(b, 0)) => a.abs() > b.abs() && a.signum() == b.signum(),
