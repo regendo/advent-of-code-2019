@@ -1,3 +1,5 @@
+use std::error::Error;
+use std::fmt;
 use std::fs;
 use std::io::{BufRead, Write};
 
@@ -66,6 +68,19 @@ pub enum IntcodeError {
 	InvalidAddress(i128),
 	TooFewParameterModes,
 	WrongParameterMode,
+}
+
+impl fmt::Display for IntcodeError {
+	// Required for Error but we really don't care.
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{:?}", self)
+	}
+}
+
+impl Error for IntcodeError {
+	fn source(&self) -> Option<&(dyn Error + 'static)> {
+		None
+	}
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

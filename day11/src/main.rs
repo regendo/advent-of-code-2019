@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut idx = 0usize;
 	let mut state = State::new();
 	loop {
-		match execute_step(&mut program, &mut idx, &mut state, reader, writer).unwrap() {
+		match execute_step(&mut program, &mut idx, &mut state, reader, writer)? {
 			Opcode::Halt => Ok(()),
 			_ => unimplemented!(),
 		}

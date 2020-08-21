@@ -7,7 +7,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let input = io::stdin();
 	let mut program = original_program;
-	execute_program(&mut program, input.lock(), io::stdout()).unwrap();
+	execute_program(&mut program, input.lock(), io::stdout())?;
 
 	Ok(())
 }
