@@ -190,30 +190,47 @@ where
 	let mut state = State::new();
 
 	loop {
-		let prev_idx = idx;
-		let instruction = program[idx];
-		if instruction < 0 {
-			return Err(IntcodeError::NegativeInstructionValue(instruction));
-		}
-
-		let (opcode, modes) = parse_instruction(instruction as u128)?;
-		match opcode {
-			Opcode::Add => add(program, idx, &modes, &state)?,
-			Opcode::Mult => mult(program, idx, &modes, &state)?,
-			Opcode::Input => input(program, idx, &modes, &mut reader, &state)?,
-			Opcode::Output => output(program, idx, &modes, &mut writer, &state)?,
-			Opcode::Halt => return Ok(()),
-			Opcode::CompareEq => compare_eq(program, idx, &modes, &state)?,
-			Opcode::CompareLt => compare_lt(program, idx, &modes, &state)?,
-			Opcode::JumpZero => jump_zero(program, &mut idx, &modes, &state)?,
-			Opcode::JumpNonZero => jump_non_zero(program, &mut idx, &modes, &state)?,
-			Opcode::AdjustRelBase => adjust_relative_base(program, idx, &modes, &mut state)?,
-		}
-		if prev_idx == idx {
-			// don't move our instruction pointer if we jumped
-			idx += 1 + opcode.param_count() as usize;
-		}
+		if let Opcode::Halt = execute_step(program, &mut idx, &mut state, &mut reader, &mut writer)? {
+			return Ok(());
+		};
 	}
+}
+
+pub fn execute_step<R, W>(
+	program: &mut [i128],
+	idx: &mut usize,
+	state: &mut State,
+	reader: &mut R,
+	writer: &mut W,
+) -> Result<Opcode, IntcodeError>
+where
+	R: BufRead,
+	W: Write,
+{
+	let prev_idx = *idx;
+	let instruction = program[*idx];
+	if instruction < 0 {
+		return Err(IntcodeError::NegativeInstructionValue(instruction));
+	}
+
+	let (opcode, modes) = parse_instruction(instruction as u128)?;
+	match opcode {
+		Opcode::Add => add(program, *idx, &modes, &state)?,
+		Opcode::Mult => mult(program, *idx, &modes, &state)?,
+		Opcode::Input => input(program, *idx, &modes, reader, &state)?,
+		Opcode::Output => output(program, *idx, &modes, writer, &state)?,
+		Opcode::Halt => (),
+		Opcode::CompareEq => compare_eq(program, *idx, &modes, &state)?,
+		Opcode::CompareLt => compare_lt(program, *idx, &modes, &state)?,
+		Opcode::JumpZero => jump_zero(program, idx, &modes, &state)?,
+		Opcode::JumpNonZero => jump_non_zero(program, idx, &modes, &state)?,
+		Opcode::AdjustRelBase => adjust_relative_base(program, *idx, &modes, state)?,
+	}
+	if prev_idx == *idx {
+		// don't move our instruction pointer if we jumped
+		*idx += 1 + opcode.param_count() as usize;
+	}
+	Ok(opcode)
 }
 
 /// Parse an instruction into its opcode and its respective parameter modes.
