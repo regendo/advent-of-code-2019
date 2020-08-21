@@ -3,6 +3,7 @@ use std::fmt;
 use std::fs;
 use std::io::{BufRead, Write};
 
+#[derive(Debug)]
 pub struct State {
 	relative_base: i128,
 }
