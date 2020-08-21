@@ -8,7 +8,12 @@ pub struct State {
 }
 impl State {
 	pub fn new() -> Self {
-		State { relative_base: 0 }
+		Default::default()
+	}
+}
+impl Default for State {
+	fn default() -> Self {
+		Self { relative_base: 0 }
 	}
 }
 

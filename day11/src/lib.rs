@@ -1,3 +1,5 @@
+use std::error::Error;
+
 enum Direction {
 	Up,
 	Left,
@@ -63,9 +65,10 @@ impl Default for Position {
 	}
 }
 
-struct Robot {
+pub struct Robot {
 	position: Position,
 	direction: Direction,
+	mind: day09::State,
 }
 
 impl Default for Robot {
@@ -73,6 +76,29 @@ impl Default for Robot {
 		Self {
 			position: Default::default(),
 			direction: Default::default(),
+			mind: Default::default(),
 		}
+	}
+}
+
+impl Robot {
+	pub fn run(&mut self, program: &mut [i128]) -> Result<(), Box<dyn Error>> {
+		let mut idx = 0usize;
+		let mut mind_output: Vec<u8> = vec![];
+		let mut mind_input: Vec<u8> = vec![];
+
+		loop {
+			match day09::execute_step(
+				program,
+				&mut idx,
+				&mut self.mind,
+				&mut &*mind_input,
+				&mut mind_output,
+			)? {
+				day09::Opcode::Halt => break,
+				_ => unimplemented!(),
+			}
+		}
+		Ok(())
 	}
 }
