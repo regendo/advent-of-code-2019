@@ -115,22 +115,45 @@ impl Hull {
 	}
 }
 
+#[derive(Debug, Copy, Clone)]
+enum InstructionType {
+	Paint,
+	Turn,
+}
+
+impl Default for InstructionType {
+	fn default() -> Self {
+		InstructionType::Paint
+	}
+}
+
+impl InstructionType {
+	fn alternate(&self) -> Self {
+		match self {
+			InstructionType::Paint => InstructionType::Turn,
+			InstructionType::Turn => InstructionType::Paint,
+		}
+	}
+}
+
 #[derive(Debug, Default)]
 pub struct Robot {
 	position: Position,
 	direction: Direction,
 	mind: day09::State,
 	hull: Hull,
+	next_instruction_type: InstructionType,
 }
 
 impl Robot {
-	pub fn run(&mut self, program: &mut [i128]) -> Result<(), Box<dyn Error>> {
+	pub fn dry_run(&mut self, program: &mut [i128]) -> Result<usize, Box<dyn Error>> {
 		let mut idx = 0usize;
-		let mut mind_output: &mut [u8] = &mut vec![];
+		let mut mind_output: &mut Vec<u8> = &mut vec![];
 
 		loop {
 			// Way too complicated to get it to accept our data.
-			let slice: &[u8] = &[self.read_from_camera()];
+			let data = self.read_from_camera().to_string();
+			let slice = data.as_bytes();
 			let mut mind_input = &mut io::BufReader::new(slice);
 
 			match day09::execute_step(
@@ -141,19 +164,39 @@ impl Robot {
 				&mut mind_output,
 			)? {
 				day09::Opcode::Halt => break,
-				day09::Opcode::Output => self.respond_to_instructions(),
+				day09::Opcode::Output => self.respond_to_instructions(&mut mind_output),
 				_ => (),
 			}
 		}
-		Ok(())
+		Ok(self.hull.panels.len())
 	}
 
 	fn read_from_camera(&self) -> u8 {
 		self.hull.read_color(&self.position).to_code()
 	}
 
-	fn respond_to_instructions(&mut self) {
-		unimplemented!()
+	fn respond_to_instructions(&mut self, instructions: &mut Vec<u8>) {
+		let raw = match instructions.remove(0) {
+			num if num.is_ascii_digit() => num - 0x30,
+			num => panic!("Invalid instruction {} provided!", num),
+		};
+		// Each instruction is followed by a newline character.
+		instructions.remove(0);
+
+		match self.next_instruction_type {
+			InstructionType::Paint => self.hull.paint(self.position, Color::from_code(raw)),
+			InstructionType::Turn => {
+				let dir = match raw {
+					0 => self.direction.rotate_left(),
+					1 => self.direction.rotate_right(),
+					_ => panic!("Invalid instructions provided!"),
+				};
+				self.direction = dir;
+				self.move_forward();
+			}
+		}
+
+		self.next_instruction_type = self.next_instruction_type.alternate();
 	}
 
 	fn move_forward(&mut self) {

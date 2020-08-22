@@ -5,5 +5,9 @@ use std::error::Error;
 fn main() -> Result<(), Box<dyn Error>> {
 	let mut program = load_program("input.txt", 0xFFFF)?;
 	let mut robot: Robot = Default::default();
-	robot.run(&mut program)
+
+	let panels_painted = robot.dry_run(&mut program)?;
+	println!("{} panels would be painted at least once!", panels_painted);
+
+	Ok(())
 }
