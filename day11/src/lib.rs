@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt;
 use std::io;
 
 #[derive(Copy, Clone, Debug)]
@@ -92,6 +93,16 @@ impl Color {
 	}
 }
 
+impl fmt::Display for Color {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let c = match self {
+			Color::Black => "█", // U+2588 FULL BLOCK
+			Color::White => "░", // U+2591 LIGHT SHADE
+		};
+		write!(f, "{}", c)
+	}
+}
+
 #[derive(Debug)]
 struct Hull {
 	panels: HashMap<Position, Color>,
@@ -112,6 +123,44 @@ impl Hull {
 
 	fn paint(&mut self, position: Position, color: Color) {
 		self.panels.insert(position, color);
+	}
+}
+
+impl fmt::Display for Hull {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let all_positions = self.panels.keys();
+		// Very convolutedly and slowly get our hull size
+		let leftmost = all_positions
+			.clone()
+			.min_by_key(|pos| pos.x)
+			.ok_or_else(|| fmt::Error)?
+			.x;
+		let rightmost = all_positions
+			.clone()
+			.max_by_key(|pos| pos.x)
+			.ok_or_else(|| fmt::Error)?
+			.x;
+		let topmost = all_positions
+			.clone()
+			.max_by_key(|pos| pos.y)
+			.ok_or_else(|| fmt::Error)?
+			.y;
+		let bottommost = all_positions
+			.clone()
+			.min_by_key(|pos| pos.y)
+			.ok_or_else(|| fmt::Error)?
+			.y;
+
+		let width = (rightmost - leftmost + 1) as usize;
+		for y in (bottommost..=topmost).rev() {
+			let mut line = String::with_capacity(width);
+			for x in leftmost..=rightmost {
+				let pos = Position { x, y };
+				line.push_str(&self.read_color(&pos).to_string());
+			}
+			writeln!(f, "{}", line)?;
+		}
+		Ok(())
 	}
 }
 
@@ -169,6 +218,13 @@ impl Robot {
 			}
 		}
 		Ok(self.hull.panels.len())
+	}
+
+	pub fn run(&mut self, program: &mut [i128]) -> Result<String, Box<dyn Error>> {
+		// Start on a white panel instead.
+		self.hull.paint(self.position, Color::White);
+		self.dry_run(program)?;
+		Ok(self.hull.to_string())
 	}
 
 	fn read_from_camera(&self) -> u8 {
