@@ -1,4 +1,4 @@
-use day12::Pos;
+use day12::{Moon, Pos};
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fs::read_to_string;
@@ -12,10 +12,7 @@ fn input() -> Result<Vec<Pos>, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let positions = input()?;
-	for pos in positions {
-		println!("Position {:?}", pos);
-	}
+	let moons = input()?.iter().map(Moon::new);
 
 	Ok(())
 }
