@@ -5,10 +5,10 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::ops::{Add, AddAssign};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Pos(i32, i32, i32);
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Vel(i32, i32, i32);
 
 impl Default for Vel {
@@ -52,7 +52,7 @@ impl TryFrom<&str> for Pos {
 	}
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Moon {
 	pos: Pos,
 	vel: Vel,
@@ -120,10 +120,150 @@ impl Moon {
 	}
 }
 
-fn advance_time(system: &[&mut Moon]) {
-	unimplemented!()
+pub fn advance_time(system: &mut [Moon]) -> Result<(), Box<dyn Error>> {
+	let idx_pairs = PairwiseIterator::new(0, system.len() - 1);
+	for (a, b) in idx_pairs {
+		let (left, right) = system.split_at_mut(b);
+		left
+			.get_mut(a)
+			.ok_or(format!("Invalid index a: {}", a))?
+			// this is 0 because this slice starts at `b`
+			.attract(right.get_mut(0).ok_or(format!("Invalid index b: {}", b))?);
+	}
+	for moon in system.iter_mut() {
+		(*moon).travel();
+	}
+	Ok(())
 }
 
-fn total_energy(system: &[&mut Moon]) -> i32 {
+pub fn total_energy(system: &[&mut Moon]) -> i32 {
 	system.iter().map(|m| m.total_energy()).sum()
+}
+
+#[derive(Debug)]
+struct PairwiseIterator {
+	cur_low: usize,
+	cur_high: usize,
+	abs_low: usize,
+	abs_high: usize,
+}
+
+impl PairwiseIterator {
+	fn new(a: usize, b: usize) -> Self {
+		let (abs_low, abs_high) = match a.cmp(&b) {
+			Ordering::Greater => (b, a),
+			Ordering::Less => (a, b),
+			Ordering::Equal => (a, a),
+		};
+		Self {
+			abs_high,
+			abs_low,
+			cur_low: abs_low,
+			// We never return this wrong cur_high value
+			// because we always increment it before returning a Some.
+			cur_high: abs_low,
+		}
+	}
+}
+
+impl Iterator for PairwiseIterator {
+	type Item = (usize, usize);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match (self.cur_low, self.cur_high) {
+			(a, b) if b == self.abs_high && b == a + 1 => None,
+			(_, b) if b == self.abs_high => {
+				self.cur_low += 1;
+				self.cur_high = self.cur_low + 1;
+				Some((self.cur_low, self.cur_high))
+			}
+			(_, b) if b < self.abs_high => {
+				self.cur_high += 1;
+				Some((self.cur_low, self.cur_high))
+			}
+			_ => unreachable!(),
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn example_a() {
+		let starting_positions = [Pos(-1, 0, 2), Pos(2, -10, -7), Pos(4, -8, 8), Pos(3, 5, -1)];
+		let mut system: Vec<Moon> = starting_positions.iter().map(Moon::new).collect();
+
+		advance_time(&mut system);
+		assert_eq!(
+			system,
+			[
+				Moon {
+					pos: Pos(2, -1, 1),
+					vel: Vel(3, -1, -1)
+				},
+				Moon {
+					pos: Pos(3, -7, -4),
+					vel: Vel(1, 3, 3)
+				},
+				Moon {
+					pos: Pos(1, -7, 5),
+					vel: Vel(-3, 1, -3)
+				},
+				Moon {
+					pos: Pos(2, 2, 0),
+					vel: Vel(-1, -3, 1)
+				}
+			]
+		);
+		for _ in 2..=5 {
+			advance_time(&mut system);
+		}
+		assert_eq!(
+			system,
+			[
+				Moon {
+					pos: Pos(-1, -9, 2),
+					vel: Vel(-3, -1, 2)
+				},
+				Moon {
+					pos: Pos(4, 1, 5),
+					vel: Vel(2, 0, -2)
+				},
+				Moon {
+					pos: Pos(2, 2, -4),
+					vel: Vel(0, -1, 2)
+				},
+				Moon {
+					pos: Pos(3, -7, -1),
+					vel: Vel(1, 2, -2)
+				}
+			]
+		);
+		for _ in 6..=10 {
+			advance_time(&mut system);
+		}
+		assert_eq!(
+			system,
+			[
+				Moon {
+					pos: Pos(2, 1, -3),
+					vel: Vel(-3, -2, 1)
+				},
+				Moon {
+					pos: Pos(1, -8, 0),
+					vel: Vel(-1, 1, 3)
+				},
+				Moon {
+					pos: Pos(3, -6, 1),
+					vel: Vel(3, 2, -3)
+				},
+				Moon {
+					pos: Pos(2, 0, 4),
+					vel: Vel(1, -1, -1)
+				}
+			]
+		);
+	}
 }
