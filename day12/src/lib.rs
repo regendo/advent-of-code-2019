@@ -217,6 +217,7 @@ mod tests {
 				}
 			]
 		);
+		// Too lazy to assert_eq! after each step. That's a lot of typing!
 		for _ in 2..=5 {
 			advance_time(&mut system);
 		}
@@ -274,5 +275,73 @@ mod tests {
 			[36, 45, 80, 18]
 		);
 		assert_eq!(total_energy(&system), 179);
+	}
+
+	#[test]
+	fn example_b() {
+		let starting_positions = [
+			Pos(-8, -10, 0),
+			Pos(5, 5, 10),
+			Pos(2, -7, 3),
+			Pos(9, -8, -3),
+		];
+		let mut system: Vec<Moon> = starting_positions.iter().map(Moon::new).collect();
+		for _ in 1..=10 {
+			advance_time(&mut system);
+		}
+		assert_eq!(
+			system,
+			[
+				Moon {
+					pos: Pos(-9, -10, 1),
+					vel: Vel(-2, -2, -1)
+				},
+				Moon {
+					pos: Pos(4, 10, 9),
+					vel: Vel(-3, 7, -2)
+				},
+				Moon {
+					pos: Pos(8, -10, -3),
+					vel: Vel(5, -1, -2)
+				},
+				Moon {
+					pos: Pos(5, -10, 3),
+					vel: Vel(0, -4, 5)
+				}
+			]
+		);
+		// DEFINITELY too lazy to do these intermediate steps
+		for _ in 11..=100 {
+			advance_time(&mut system);
+		}
+		assert_eq!(
+			system,
+			[
+				Moon {
+					pos: Pos(8, -12, -9),
+					vel: Vel(-7, 3, 0)
+				},
+				Moon {
+					pos: Pos(13, 16, -3),
+					vel: Vel(3, -11, -5)
+				},
+				Moon {
+					pos: Pos(-29, -11, -1),
+					vel: Vel(-3, 7, 4)
+				},
+				Moon {
+					pos: Pos(16, -13, 23),
+					vel: Vel(7, 1, 1)
+				}
+			]
+		);
+		assert_eq!(
+			system
+				.iter()
+				.map(|m| m.total_energy())
+				.collect::<Vec<i32>>(),
+			[290, 608, 574, 468]
+		);
+		assert_eq!(total_energy(&system), 1940);
 	}
 }
