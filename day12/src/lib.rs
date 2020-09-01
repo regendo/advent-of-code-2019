@@ -108,11 +108,11 @@ impl Moon {
 	}
 
 	fn potential_energy(self) -> i32 {
-		self.pos.0 + self.pos.1 + self.pos.2
+		self.pos.0.abs() + self.pos.1.abs() + self.pos.2.abs()
 	}
 
 	fn kinetic_energy(self) -> i32 {
-		self.vel.0 + self.vel.1 + self.vel.2
+		self.vel.0.abs() + self.vel.1.abs() + self.vel.2.abs()
 	}
 
 	pub fn total_energy(self) -> i32 {
@@ -136,7 +136,7 @@ pub fn advance_time(system: &mut [Moon]) -> Result<(), Box<dyn Error>> {
 	Ok(())
 }
 
-pub fn total_energy(system: &[&mut Moon]) -> i32 {
+pub fn total_energy(system: &[Moon]) -> i32 {
 	system.iter().map(|m| m.total_energy()).sum()
 }
 
@@ -265,5 +265,14 @@ mod tests {
 				}
 			]
 		);
+
+		assert_eq!(
+			system
+				.iter()
+				.map(|m| m.total_energy())
+				.collect::<Vec<i32>>(),
+			[36, 45, 80, 18]
+		);
+		assert_eq!(total_energy(&system), 179);
 	}
 }
