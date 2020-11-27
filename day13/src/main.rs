@@ -1,7 +1,12 @@
 use day09::{self, execute_step};
-use std::u8;
 use std::{collections::HashMap, io};
 use std::{convert::TryFrom, error::Error};
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum Instruction {
+	DrawTile((i32, i32), Tile),
+	Score(i32),
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum Tile {
@@ -12,10 +17,10 @@ enum Tile {
 	Ball,
 }
 
-impl TryFrom<u8> for Tile {
+impl TryFrom<i32> for Tile {
 	type Error = String;
 
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
+	fn try_from(value: i32) -> Result<Self, Self::Error> {
 		match value {
 			0 => Ok(Tile::Empty),
 			1 => Ok(Tile::Wall),
@@ -27,31 +32,45 @@ impl TryFrom<u8> for Tile {
 	}
 }
 
+fn parse_output(raw_output: Vec<u8>) -> Result<Vec<Instruction>, Box<dyn Error>> {
+	let text_output = String::from_utf8(raw_output)?;
+	let mut sanitized_output = text_output
+		.lines()
+		.filter_map(|line| i32::from_str_radix(line.trim(), 10).ok())
+		.peekable();
+
+	let mut instructions = Vec::new();
+
+	while let Some(_) = sanitized_output.peek() {
+		match (
+			sanitized_output.next(),
+			sanitized_output.next(),
+			sanitized_output.next(),
+		) {
+			(Some(-1), Some(0), Some(score)) => instructions.push(Instruction::Score(score)),
+			(Some(x), Some(y), Some(code)) => {
+				instructions.push(Instruction::DrawTile((x, y), Tile::try_from(code)?))
+			}
+			_ => Err("Leftover values!")?,
+		}
+	}
+
+	Ok(instructions)
+}
+
 fn part_1() -> Result<(), Box<dyn Error>> {
 	let mut program = day09::load_program("input.txt", 0xFFFF)?;
 
 	let mut output = Vec::new();
 	day09::execute_program(&mut program, io::empty(), &mut output)?;
 
-	let text_output = String::from_utf8(output)?;
-	let mut instructions = text_output
-		.lines()
-		.filter_map(|line| u8::from_str_radix(line.trim(), 10).ok())
-		.peekable();
-
-	let mut canvas: HashMap<(u8, u8), Tile> = HashMap::new();
-	while let Some(_) = instructions.peek() {
-		match (
-			instructions.next(),
-			instructions.next(),
-			instructions.next(),
-		) {
-			(Some(x), Some(y), Some(code)) => {
-				*canvas.entry((x, y)).or_insert(Tile::Empty) = Tile::try_from(code)?;
-			}
-			_ => panic!("Leftover elements!"),
+	let mut canvas: HashMap<(i32, i32), Tile> = HashMap::new();
+	let instructions = parse_output(output)?;
+	instructions.iter().for_each(|instruction| {
+		if let Instruction::DrawTile((x, y), tile) = instruction {
+			*canvas.entry((*x, *y)).or_insert(Tile::Empty) = *tile;
 		}
-	}
+	});
 
 	println!(
 		"{} block tiles visible.",
@@ -83,7 +102,7 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
 	part_1()?;
-	part_2()?;
+	// part_2()?;
 
 	Ok(())
 }
