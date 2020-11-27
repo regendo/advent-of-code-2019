@@ -1,5 +1,5 @@
 use day09::{self, execute_step};
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, fmt::Display, io};
 use std::{convert::TryFrom, error::Error};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -15,6 +15,23 @@ enum Tile {
 	Block,
 	HorizontalPaddle,
 	Ball,
+}
+
+impl Display for Tile {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				// Empty and Block are double-width because so are all the emoji
+				Tile::Empty => "  ",
+				Tile::Ball => "⚽",
+				Tile::Wall => "▮▮",
+				Tile::Block => "🎁",
+				Tile::HorizontalPaddle => "🏃",
+			}
+		)
+	}
 }
 
 impl TryFrom<i32> for Tile {
@@ -88,11 +105,46 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 	let mut input = io::BufReader::new(io::stdin());
 	let mut idx = 0_usize;
 	let mut state = day09::State::new();
+	let mut canvas: HashMap<(i32, i32), Tile> = HashMap::new();
+	let mut score = 0;
+	let mut max_x = 9;
+	let mut max_y = 9;
 
 	loop {
 		match day09::execute_step(&mut program, &mut idx, &mut state, &mut input, &mut output)? {
 			day09::Opcode::Halt => break,
-			day09::Opcode::Output => todo!(),
+			day09::Opcode::Output => {
+				if let Ok(instructions) = parse_output(output.clone()) {
+					for instruction in instructions {
+						match instruction {
+							Instruction::Score(value) => score = value,
+							Instruction::DrawTile((x, y), tile) => {
+								*canvas.entry((x, y)).or_insert(Tile::Empty) = tile;
+								if x > max_x {
+									max_x = x;
+								}
+								if y > max_y {
+									max_y = y;
+								}
+							}
+						}
+					}
+
+					println!("Score: {}", score);
+					for y in 0..=max_y {
+						for x in 0..=max_x {
+							print!(
+								"{}",
+								match canvas.get(&(x, y)) {
+									Some(tile) => *tile,
+									None => Tile::Empty,
+								}
+							)
+						}
+						println!();
+					}
+				}
+			}
 			_ => (),
 		}
 	}
@@ -101,8 +153,8 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	part_1()?;
-	// part_2()?;
+	// part_1()?;
+	part_2()?;
 
 	Ok(())
 }
