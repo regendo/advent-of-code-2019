@@ -54,8 +54,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 	}
 
 	println!(
-		"{} tiles visible.",
-		canvas.values().filter(|tile| **tile != Tile::Empty).count()
+		"{} block tiles visible.",
+		canvas.values().filter(|tile| **tile == Tile::Block).count()
 	);
 
 	Ok(())
