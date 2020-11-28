@@ -1,19 +1,19 @@
 use std::{collections::HashMap, convert::TryFrom, fmt::Display};
 
-mod io;
+pub mod io;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum Status {
+enum Feedback {
 	Moved,
 	MovedAndFoundTarget,
 	EncounteredWall,
 }
 
-impl TryFrom<u8> for Status {
+impl TryFrom<u8> for Feedback {
 	type Error = String;
 
 	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		use Status::*;
+		use Feedback::*;
 		Ok(match value {
 			0 => EncounteredWall,
 			1 => Moved,
@@ -39,6 +39,16 @@ impl Direction {
 			South => 2,
 			West => 3,
 			East => 4,
+		}
+	}
+
+	fn step(self, pos: (i32, i32)) -> (i32, i32) {
+		use Direction::*;
+		match self {
+			West => (pos.0 - 1, pos.1),
+			East => (pos.0 + 1, pos.1),
+			North => (pos.0, pos.1 - 1),
+			South => (pos.0, pos.1 + 1),
 		}
 	}
 }
@@ -78,6 +88,7 @@ pub struct GameState {
 	droid_pos: (i32, i32),
 	world: HashMap<(i32, i32), Tile>,
 	world_size: HashMap<Direction, u32>,
+	previous_move: Option<Direction>,
 }
 
 impl Default for GameState {
@@ -94,6 +105,7 @@ impl Default for GameState {
 			]
 			.into_iter()
 			.collect(),
+			previous_move: None,
 		}
 	}
 }
