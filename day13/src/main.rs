@@ -2,8 +2,119 @@ use day09;
 use std::{collections::HashMap, fmt::Display, io};
 use std::{convert::TryFrom, error::Error};
 
+trait Decider: io::BufRead {
+	fn decide_on_move(&mut self, player_position: (i32, i32), ball_position: (i32, i32));
+}
+
+impl Decider for io::BufReader<io::Stdin> {
+	fn decide_on_move(&mut self, player_position: (i32, i32), ball_position: (i32, i32)) {
+		// Intentionally left blank.
+		()
+	}
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum Move {
+	Stay,
+	Left,
+	Right,
+}
+
+impl TryFrom<i32> for Move {
+	type Error = String;
+
+	fn try_from(value: i32) -> Result<Self, Self::Error> {
+		Ok(match value {
+			-1 => Move::Left,
+			0 => Move::Stay,
+			1 => Move::Right,
+			_ => return Err(format!("Unexpected value {}", value)),
+		})
+	}
+}
+
+struct AI {
+	next_move: Move,
+	previous_ball_position: Option<(i32, i32)>,
+}
+
+impl Default for AI {
+	fn default() -> Self {
+		Self {
+			next_move: Move::Stay,
+			previous_ball_position: None,
+		}
+	}
+}
+
+impl Decider for AI {
+	fn decide_on_move(&mut self, player_position: (i32, i32), ball_position: (i32, i32)) {
+		if let Some(prev) = self.previous_ball_position {
+			// >0 -> ball to my right; <0 -> ball to my left; =0 -> ball above me
+			let ball_relative_x = ball_position.0 - player_position.0;
+			// >0 -> ball moves toward right; etc
+			let ball_movement = ball_position.0 - prev.0;
+
+			// if ball_relative_x == ball_movement {
+			// Ball moves away from me -> I move toward the ball
+			self.next_move = Move::try_from(ball_relative_x.signum()).unwrap();
+		// } else {
+		// Turns out we don't even need this
+		// }
+		} else {
+			// We don't react on the first turn. This works in practice.
+			self.next_move = Move::Stay;
+		}
+		self.previous_ball_position = Some(ball_position);
+	}
+}
+
+impl io::Read for AI {
+	fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+		// We just need to have the method for the trait, we don't actually use it.
+		unimplemented!()
+	}
+}
+
+impl io::BufRead for AI {
+	fn fill_buf(&mut self) -> io::Result<&[u8]> {
+		// We just need to have the method for the trait, we don't actually use it.
+		unimplemented!()
+	}
+
+	fn consume(&mut self, amt: usize) {
+		// We just need to have the method for the trait, we don't actually use it.
+		unimplemented!()
+	}
+	fn read_line(&mut self, buf: &mut String) -> io::Result<usize> {
+		match self.next_move {
+			Move::Stay => {
+				buf.push_str("\n");
+				Ok(1)
+			}
+			Move::Left => {
+				buf.push_str("\u{1b}[D\n");
+				Ok(4)
+			}
+			Move::Right => {
+				buf.push_str("\u{1b}[C\n");
+				Ok(4)
+			}
+		}
+	}
+}
+
 struct GameInput {
-	inner: io::BufReader<io::Stdin>,
+	inner: Box<dyn Decider>,
+}
+
+impl GameInput {
+	fn observe_state(&mut self, player_position: (i32, i32), ball_position: (i32, i32)) {
+		self
+			.inner
+			.as_mut()
+			.decide_on_move(player_position, ball_position);
+	}
 }
 
 impl io::Read for GameInput {
@@ -152,14 +263,12 @@ fn part_1() -> Result<(), Box<dyn Error>> {
 	Ok(())
 }
 
-fn part_2() -> Result<(), Box<dyn Error>> {
+fn part_2(reader: Box<dyn Decider>) -> Result<(), Box<dyn Error>> {
 	let mut program = day09::load_program("input.txt", 0xFFFF)?;
 	program[0] = 2;
 
 	let mut output = Vec::new();
-	let mut input = GameInput {
-		inner: io::BufReader::new(io::stdin()),
-	};
+	let mut input = GameInput { inner: reader };
 	let mut idx = 0_usize;
 	let mut state = day09::State::new();
 	let mut canvas: HashMap<(i32, i32), Tile> = HashMap::new();
@@ -172,38 +281,54 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 			day09::Opcode::Halt => break,
 			_ => {
 				let next_op = program[idx];
-				if let Ok((day09::Opcode::Input, _)) = day09::parse_instruction(next_op as u128) {
-				if let Ok(instructions) = parse_output(output.clone()) {
-					for instruction in instructions {
-						match instruction {
-							Instruction::Score(value) => score = value,
-							Instruction::DrawTile((x, y), tile) => {
-								*canvas.entry((x, y)).or_insert(Tile::Empty) = tile;
-								if x > max_x {
-									max_x = x;
-								}
-								if y > max_y {
-									max_y = y;
+				match day09::parse_instruction(next_op as u128) {
+					Ok((day09::Opcode::Input, _)) | Ok((day09::Opcode::Halt, _)) => {
+						if let Ok(instructions) = parse_output(output.clone()) {
+							for instruction in instructions {
+								match instruction {
+									Instruction::Score(value) => score = value,
+									Instruction::DrawTile((x, y), tile) => {
+										*canvas.entry((x, y)).or_insert(Tile::Empty) = tile;
+										if x > max_x {
+											max_x = x;
+										}
+										if y > max_y {
+											max_y = y;
+										}
+									}
 								}
 							}
-						}
-					}
 
-					println!("Score: {}", score);
-					for y in 0..=max_y {
-						for x in 0..=max_x {
-							print!(
-								"{}",
-								match canvas.get(&(x, y)) {
-									Some(tile) => *tile,
-									None => Tile::Empty,
+							println!("Score: {}", score);
+
+							let mut player_position = (0, 0);
+							let mut ball_position = (0, 0);
+							for y in 0..=max_y {
+								for x in 0..=max_x {
+									let entry = canvas.get(&(x, y));
+
+									print!(
+										"{}",
+										match entry {
+											Some(tile) => *tile,
+											None => Tile::Empty,
+										}
+									);
+
+									match entry {
+										Some(Tile::Ball) => ball_position = (x, y),
+										Some(Tile::HorizontalPaddle) => player_position = (x, y),
+										_ => (),
+									}
 								}
-							)
+								println!();
+							}
+							input.observe_state(player_position, ball_position);
 						}
-						println!();
 					}
+					Ok((_, _)) => (),
+					Err(_) => (),
 				}
-			}
 			}
 		}
 	}
@@ -213,7 +338,10 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
 	// part_1()?;
-	part_2()?;
+
+	// let reader = Box::new(io::BufReader::new(io::stdin()));
+	let reader = Box::new(AI::default());
+	part_2(reader)?;
 
 	Ok(())
 }
