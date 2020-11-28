@@ -1,3 +1,7 @@
+use day15::GameState;
+
 fn main() {
-	println!("Hello, world!");
+	let game = GameState::default();
+
+	println!("{}", game);
 }
