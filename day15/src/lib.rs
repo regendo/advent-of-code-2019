@@ -51,6 +51,16 @@ impl Direction {
 			South => (pos.0, pos.1 + 1),
 		}
 	}
+
+	fn reverse(self) -> Self {
+		use Direction::*;
+		match self {
+			North => South,
+			South => North,
+			West => East,
+			East => West,
+		}
+	}
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

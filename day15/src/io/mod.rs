@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, io, sync::RwLock};
+use std::{collections::HashMap, convert::TryFrom, io, sync::RwLock};
 
 use crate::{Direction, Feedback, GameState, Tile};
 
@@ -8,8 +8,36 @@ pub struct AI<'a> {
 
 impl AI<'_> {
 	fn choose_direction(&self) -> Direction {
-		// TODO
-		Direction::West
+		let game = self.game_state.read().unwrap();
+		let dirs: HashMap<Direction, (i32, i32)> = vec![
+			Direction::North,
+			Direction::East,
+			Direction::South,
+			Direction::West,
+		]
+		.into_iter()
+		.map(|d| (d, d.step(game.droid_pos)))
+		.filter(|(_, pos)| match game.world.get(pos) {
+			Some(Tile::Wall) => false,
+			_ => true,
+		})
+		.collect();
+
+		match dirs.len() {
+			0 => panic!("We're boxed in?!"),
+			1 | 2 => *dirs.keys().next().unwrap(),
+			_ => *dirs
+				.keys()
+				.filter(|d| {
+					if let Some(prev) = game.previous_move {
+						**d != prev.reverse()
+					} else {
+						true
+					}
+				})
+				.next()
+				.unwrap(),
+		}
 	}
 }
 
@@ -113,5 +141,25 @@ impl Output<'_> {
 		*game.world.entry(next_position).or_default() = Tile::Droid;
 		*game.world.entry(current_position).or_default() = Tile::Traversable;
 		game.droid_pos = next_position;
+
+		// Extend the world map
+		let y_coord = if next_position.1 >= 0 {
+			(Direction::South, next_position.1 as u32)
+		} else {
+			(Direction::North, -next_position.1 as u32)
+		};
+		let x_coord = if next_position.0 >= 0 {
+			(Direction::East, next_position.0 as u32)
+		} else {
+			(Direction::West, -next_position.0 as u32)
+		};
+		let y_size = game.world_size.get_mut(&y_coord.0).unwrap();
+		if y_coord.1 > *y_size {
+			*y_size = y_coord.1
+		}
+		let x_size = game.world_size.get_mut(&x_coord.0).unwrap();
+		if x_coord.1 > *x_size {
+			*x_size = x_coord.1
+		}
 	}
 }
