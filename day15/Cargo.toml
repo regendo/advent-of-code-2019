@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 "day09" = { path = "../day09" }
+"ansi_term" = "0.12"

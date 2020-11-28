@@ -1,4 +1,4 @@
-use std::{collections::HashMap, convert::TryFrom, io, sync::RwLock};
+use std::{collections::HashMap, convert::TryFrom, io, process::exit, sync::RwLock};
 
 use crate::{Direction, Feedback, GameState, Tile};
 
@@ -8,7 +8,7 @@ pub struct AI<'a> {
 
 impl AI<'_> {
 	fn choose_direction(&self) -> Direction {
-		let game = self.game_state.read().unwrap();
+		let mut game = self.game_state.write().unwrap();
 		let dirs: HashMap<Direction, (i32, i32)> = vec![
 			Direction::North,
 			Direction::East,
@@ -19,13 +19,19 @@ impl AI<'_> {
 		.map(|d| (d, d.step(game.droid_pos)))
 		.filter(|(_, pos)| match game.world.get(pos) {
 			Some(Tile::Wall) => false,
+			Some(Tile::Cursed) => false,
 			_ => true,
 		})
 		.collect();
+		game.block_way_back = false;
 
 		match dirs.len() {
 			0 => panic!("We're boxed in?!"),
-			1 | 2 => *dirs.keys().next().unwrap(),
+			1 => {
+				game.block_way_back = true;
+				*dirs.keys().next().unwrap()
+			}
+			2 => *dirs.keys().next().unwrap(),
 			_ => *dirs
 				.keys()
 				.filter(|d| {
@@ -69,6 +75,7 @@ impl io::BufRead for AI<'_> {
 
 pub struct Output<'a> {
 	pub game_state: &'a RwLock<GameState>,
+	pub framecount: u16,
 }
 
 impl io::Write for Output<'_> {
@@ -92,12 +99,17 @@ impl io::Write for Output<'_> {
 				Feedback::Moved => self.step(),
 				Feedback::MovedAndFoundTarget => {
 					self.step();
-					println!("WE DID IT!")
+					println!("{}", self.game_state.read().unwrap());
+					println!("WE DID IT!");
+					exit(0);
 				}
 				Feedback::EncounteredWall => self.register_wall_ahead(),
 			}
 
-			println!("{}", self.game_state.read().unwrap())
+			if self.framecount == 0 {
+				println!("{}", self.game_state.read().unwrap())
+			}
+			self.framecount = self.framecount.wrapping_add(1);
 		}
 
 		Ok(1)
@@ -139,7 +151,11 @@ impl Output<'_> {
 
 		let mut game = self.game_state.write().unwrap();
 		*game.world.entry(next_position).or_default() = Tile::Droid;
-		*game.world.entry(current_position).or_default() = Tile::Traversable;
+		*game.world.entry(current_position).or_default() = if game.block_way_back {
+			Tile::Cursed
+		} else {
+			Tile::Traversable
+		};
 		game.droid_pos = next_position;
 
 		// Extend the world map
@@ -154,12 +170,12 @@ impl Output<'_> {
 			(Direction::West, -next_position.0 as u32)
 		};
 		let y_size = game.world_size.get_mut(&y_coord.0).unwrap();
-		if y_coord.1 > *y_size {
-			*y_size = y_coord.1
+		if y_coord.1 >= *y_size {
+			*y_size = y_coord.1 + 1
 		}
 		let x_size = game.world_size.get_mut(&x_coord.0).unwrap();
-		if x_coord.1 > *x_size {
-			*x_size = x_coord.1
+		if x_coord.1 >= *x_size {
+			*x_size = x_coord.1 + 1
 		}
 	}
 }

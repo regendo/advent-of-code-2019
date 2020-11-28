@@ -7,7 +7,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let _game = lib::GameState::default();
 	let game = RwLock::new(_game);
 	let ai = lib::io::AI { game_state: &game };
-	let output = lib::io::Output { game_state: &game };
+	let output = lib::io::Output {
+		game_state: &game,
+		framecount: 0,
+	};
 	let mut program = intcode::load_program("input.txt", 0xFFFF)?;
 	intcode::execute_program(&mut program, ai, output)?;
 

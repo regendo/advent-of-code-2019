@@ -1,3 +1,4 @@
+use ansi_term::Color;
 use std::{collections::HashMap, convert::TryFrom, fmt::Display};
 
 pub mod io;
@@ -69,6 +70,7 @@ enum Tile {
 	Traversable,
 	Wall,
 	Droid,
+	Cursed,
 }
 
 impl Display for Tile {
@@ -78,10 +80,11 @@ impl Display for Tile {
 			f,
 			"{}",
 			match self {
-				Unexplored => "?",
-				Traversable => ".",
-				Wall => "#",
-				Droid => "D",
+				Unexplored => Color::Cyan.paint("?"),
+				Traversable => Color::Black.paint("."),
+				Wall => Color::White.paint("#"),
+				Droid => Color::Red.paint("X"),
+				Cursed => Color::White.dimmed().paint("#"),
 			}
 		)
 	}
@@ -99,6 +102,7 @@ pub struct GameState {
 	world: HashMap<(i32, i32), Tile>,
 	world_size: HashMap<Direction, u32>,
 	previous_move: Option<Direction>,
+	block_way_back: bool,
 }
 
 impl Default for GameState {
@@ -116,6 +120,7 @@ impl Default for GameState {
 			.into_iter()
 			.collect(),
 			previous_move: None,
+			block_way_back: false,
 		}
 	}
 }
@@ -128,15 +133,17 @@ impl Display for GameState {
 			for x in -(*self.world_size.get(&Direction::West).unwrap() as i32)
 				..=(*self.world_size.get(&Direction::East).unwrap() as i32)
 			{
-				write!(
-					f,
-					"{}",
-					if let Some(tile) = self.world.get(&(x, y)) {
-						*tile
-					} else {
-						Tile::default()
+				match self.world.get(&(x, y)) {
+					Some(Tile::Droid) => write!(f, "{}", Tile::Droid),
+					Some(tile) => {
+						if (x, y) == self.droid_starting_pos {
+							write!(f, "{}", Color::Yellow.paint("S"))
+						} else {
+							write!(f, "{}", *tile)
+						}
 					}
-				)?;
+					None => write!(f, "{}", Tile::default()),
+				}?;
 			}
 			write!(f, "\n")?;
 		}
