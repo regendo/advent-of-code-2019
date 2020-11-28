@@ -1,9 +1,9 @@
 use std::{collections::HashMap, error::Error};
 
-fn try_parse_chemical(value: &str) -> Result<(&str, u32), Box<dyn Error>> {
+fn try_parse_chemical(value: &str) -> Result<(&str, u64), Box<dyn Error>> {
 	let mut split = value.trim().split_whitespace();
 	if let (Some(amount), Some(name), None) = (split.next(), split.next(), split.next()) {
-		Ok((name, u32::from_str_radix(amount, 10)?))
+		Ok((name, u64::from_str_radix(amount, 10)?))
 	} else {
 		Err(format!("Unable to convert {} into a Chemical.", value).into())
 	}
@@ -11,8 +11,8 @@ fn try_parse_chemical(value: &str) -> Result<(&str, u32), Box<dyn Error>> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Reaction<'a> {
-	pub input: HashMap<&'a str, u32>,
-	pub output: (&'a str, u32),
+	pub input: HashMap<&'a str, u64>,
+	pub output: (&'a str, u64),
 }
 
 pub fn parse_reactions(source: &str) -> Result<Vec<Reaction>, Box<dyn Error>> {
@@ -26,7 +26,7 @@ pub fn parse_reactions(source: &str) -> Result<Vec<Reaction>, Box<dyn Error>> {
 					input: left
 						.split(',')
 						.map(try_parse_chemical)
-						.collect::<Result<HashMap<&str, u32>, _>>()
+						.collect::<Result<HashMap<&str, u64>, _>>()
 						.ok()?,
 					output: try_parse_chemical(right).ok()?,
 				})

@@ -4,8 +4,8 @@ use crate::parse::Reaction;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Resources<'a> {
-	pub required: HashMap<&'a str, u32>,
-	leftover: HashMap<&'a str, u32>,
+	pub required: HashMap<&'a str, u64>,
+	pub leftover: HashMap<&'a str, u64>,
 }
 
 impl Default for Resources<'static> {
@@ -23,7 +23,7 @@ pub fn what_creates<'a, 'b>(haystack: &'a [Reaction<'b>], needle: &str) -> Vec<&
 
 /// Compute the resources gained and used up in one reaction.
 /// Does not modify the input resources.
-pub fn react<'a>(reaction: &Reaction<'a>, times: u32, resources: Resources<'a>) -> Resources<'a> {
+pub fn react<'a>(reaction: &Reaction<'a>, times: u64, resources: Resources<'a>) -> Resources<'a> {
 	let mut resources = resources.clone();
 
 	{
@@ -70,7 +70,7 @@ pub fn react<'a>(reaction: &Reaction<'a>, times: u32, resources: Resources<'a>) 
 	resources
 }
 
-fn is_wanted<'a>(resource: &'a (&&str, &u32)) -> bool {
+fn is_wanted<'a>(resource: &'a (&&str, &u64)) -> bool {
 	*resource.0 != "ORE" && *resource.1 > 0
 }
 
