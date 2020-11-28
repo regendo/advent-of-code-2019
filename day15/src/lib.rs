@@ -1,5 +1,7 @@
 use std::{collections::HashMap, convert::TryFrom, fmt::Display};
 
+mod io;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum Status {
 	Moved,
