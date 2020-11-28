@@ -1,6 +1,61 @@
-use day09::{self, execute_step};
+use day09;
 use std::{collections::HashMap, fmt::Display, io};
 use std::{convert::TryFrom, error::Error};
+
+struct GameInput {
+	inner: io::BufReader<io::Stdin>,
+}
+
+impl io::Read for GameInput {
+	#[allow(unused_variables)]
+	fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+		// We just need to have the method for the trait, we don't actually use it.
+		unimplemented!()
+	}
+}
+
+impl io::BufRead for GameInput {
+	fn fill_buf(&mut self) -> io::Result<&[u8]> {
+		self.inner.fill_buf()
+	}
+
+	fn consume(&mut self, amt: usize) {
+		self.inner.consume(amt);
+	}
+
+	fn read_line(&mut self, buf: &mut String) -> io::Result<usize> {
+		let mut inner_buffer = String::new();
+		loop {
+			inner_buffer.clear();
+			let res = self.inner.read_line(&mut inner_buffer);
+			match (&res, &*inner_buffer) {
+				(Err(_), _) | (Ok(0), _) => {
+					buf.push_str(&inner_buffer);
+					return res;
+				}
+				(Ok(4), "\u{1b}[D\n") => {
+					// Left Arrow
+					buf.push_str("-1\n");
+					return Ok(3);
+				}
+				(Ok(4), "\u{1b}[C\n") => {
+					// Right Arrow
+					buf.push_str("1\n");
+					return Ok(2);
+				}
+				(Ok(1), "\n") => {
+					// Just Enter
+					buf.push_str("0\n");
+					return Ok(2);
+				}
+				(Ok(_), _) => {
+					// try again
+					println!("Move with the Left/Right arrows (or don't), then confirm with Enter.");
+				}
+			}
+		}
+	}
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum Instruction {
@@ -23,7 +78,7 @@ impl Display for Tile {
 			f,
 			"{}",
 			match self {
-				// Empty and Block are double-width because so are all the emoji
+				// Empty and Wall are double-width because so are all the emoji
 				Tile::Empty => "  ",
 				Tile::Ball => "⚽",
 				Tile::Wall => "▮▮",
@@ -102,7 +157,9 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 	program[0] = 2;
 
 	let mut output = Vec::new();
-	let mut input = io::BufReader::new(io::stdin());
+	let mut input = GameInput {
+		inner: io::BufReader::new(io::stdin()),
+	};
 	let mut idx = 0_usize;
 	let mut state = day09::State::new();
 	let mut canvas: HashMap<(i32, i32), Tile> = HashMap::new();
