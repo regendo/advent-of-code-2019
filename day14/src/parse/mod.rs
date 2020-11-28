@@ -1,31 +1,18 @@
-use std::{convert::TryFrom, error::Error};
+use std::{collections::HashMap, error::Error};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Chemical {
-	name: String,
-	amount: u8,
-}
-
-impl TryFrom<&str> for Chemical {
-	type Error = Box<dyn Error>;
-
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		let mut split = value.trim().split_whitespace();
-		if let (Some(amount), Some(name), None) = (split.next(), split.next(), split.next()) {
-			Ok(Self {
-				name: name.to_owned(),
-				amount: u8::from_str_radix(amount, 10)?,
-			})
-		} else {
-			Err(format!("Unable to convert {} into a Chemical.", value))?
-		}
+fn try_parse_chemical<'a>(value: &str) -> Result<(&str, u8), Box<dyn Error>> {
+	let mut split = value.trim().split_whitespace();
+	if let (Some(amount), Some(name), None) = (split.next(), split.next(), split.next()) {
+		Ok((name, u8::from_str_radix(amount, 10)?))
+	} else {
+		Err(format!("Unable to convert {} into a Chemical.", value).into())
 	}
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Reaction {
-	input: Vec<Chemical>,
-	output: Chemical,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reaction<'a> {
+	input: HashMap<&'a str, u8>,
+	pub output: (&'a str, u8),
 }
 
 pub fn parse_reactions(source: &str) -> Result<Vec<Reaction>, Box<dyn Error>> {
@@ -38,10 +25,10 @@ pub fn parse_reactions(source: &str) -> Result<Vec<Reaction>, Box<dyn Error>> {
 				Some(Reaction {
 					input: left
 						.split(',')
-						.map(Chemical::try_from)
-						.collect::<Result<Vec<Chemical>, _>>()
+						.map(try_parse_chemical)
+						.collect::<Result<HashMap<&str, u8>, _>>()
 						.ok()?,
-					output: Chemical::try_from(right).ok()?,
+					output: try_parse_chemical(right).ok()?,
 				})
 			} else {
 				None
@@ -56,13 +43,7 @@ mod tests {
 
 	#[test]
 	fn it_constructs_chemicals() {
-		assert_eq!(
-			Chemical::try_from("10 ORE").unwrap(),
-			Chemical {
-				name: "ORE".to_owned(),
-				amount: 10
-			}
-		);
+		assert_eq!(try_parse_chemical("10 ORE").unwrap(), ("ORE", 10));
 	}
 
 	#[test]
@@ -79,88 +60,28 @@ mod tests {
 			constructed,
 			vec![
 				Reaction {
-					input: vec![Chemical {
-						name: "ORE".to_owned(),
-						amount: 10
-					}],
-					output: Chemical {
-						name: "A".to_owned(),
-						amount: 10
-					}
+					input: vec![("ORE", 10)].into_iter().collect(),
+					output: ("A", 10)
 				},
 				Reaction {
-					input: vec![Chemical {
-						name: "ORE".to_owned(),
-						amount: 1
-					}],
-					output: Chemical {
-						name: "B".to_owned(),
-						amount: 1
-					}
+					input: vec![("ORE", 1)].into_iter().collect(),
+					output: ("B", 1)
 				},
 				Reaction {
-					input: vec![
-						Chemical {
-							name: "A".to_owned(),
-							amount: 7
-						},
-						Chemical {
-							name: "B".to_owned(),
-							amount: 1
-						}
-					],
-					output: Chemical {
-						name: "C".to_owned(),
-						amount: 1
-					}
+					input: vec![("A", 7), ("B", 1)].into_iter().collect(),
+					output: ("C", 1)
 				},
 				Reaction {
-					input: vec![
-						Chemical {
-							name: "A".to_owned(),
-							amount: 7
-						},
-						Chemical {
-							name: "C".to_owned(),
-							amount: 1
-						}
-					],
-					output: Chemical {
-						name: "D".to_owned(),
-						amount: 1
-					}
+					input: vec![("A", 7), ("C", 1)].into_iter().collect(),
+					output: ("D", 1)
 				},
 				Reaction {
-					input: vec![
-						Chemical {
-							name: "A".to_owned(),
-							amount: 7
-						},
-						Chemical {
-							name: "D".to_owned(),
-							amount: 1
-						}
-					],
-					output: Chemical {
-						name: "E".to_owned(),
-						amount: 1
-					}
+					input: vec![("A", 7), ("D", 1)].into_iter().collect(),
+					output: ("E", 1)
 				},
 				Reaction {
-					input: vec![
-						Chemical {
-							name: "A".to_owned(),
-							amount: 7
-						},
-						Chemical {
-							name: "E".to_owned(),
-							amount: 1
-						}
-					],
-					output: Chemical {
-						name: "FUEL".to_owned(),
-						amount: 1
-					}
+					input: vec![("A", 7), ("E", 1)].into_iter().collect(),
+					output: ("FUEL", 1)
 				},
 			]
 		);
