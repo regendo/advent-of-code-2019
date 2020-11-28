@@ -170,7 +170,9 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 	loop {
 		match day09::execute_step(&mut program, &mut idx, &mut state, &mut input, &mut output)? {
 			day09::Opcode::Halt => break,
-			day09::Opcode::Output => {
+			_ => {
+				let next_op = program[idx];
+				if let Ok((day09::Opcode::Input, _)) = day09::parse_instruction(next_op as u128) {
 				if let Ok(instructions) = parse_output(output.clone()) {
 					for instruction in instructions {
 						match instruction {
@@ -202,7 +204,7 @@ fn part_2() -> Result<(), Box<dyn Error>> {
 					}
 				}
 			}
-			_ => (),
+			}
 		}
 	}
 
