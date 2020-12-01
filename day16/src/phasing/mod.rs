@@ -1,7 +1,7 @@
 use crate::stutter;
 use std::convert::TryFrom;
 
-pub fn apply_pattern(number: u8, signal: &[u8], pattern: &[i8]) -> u8 {
+pub fn apply_pattern(number: u32, signal: &[u8], pattern: &[i8]) -> u8 {
 	(stutter::Stutter::new(pattern.iter().cycle(), number)
 		.skip(1)
 		.zip(signal.iter().cycle())
@@ -13,7 +13,7 @@ pub fn apply_pattern(number: u8, signal: &[u8], pattern: &[i8]) -> u8 {
 
 pub fn apply_phase(signal: &[u8], pattern: &[i8]) -> Vec<u8> {
 	(0..signal.len())
-		.map(|i| apply_pattern(u8::try_from(i).unwrap(), signal, pattern))
+		.map(|i| apply_pattern(u32::try_from(i).unwrap(), signal, pattern))
 		.collect()
 }
 

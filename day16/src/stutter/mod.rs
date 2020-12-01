@@ -7,8 +7,8 @@ where
 	<I as Iterator>::Item: Clone,
 {
 	inner: Peekable<I>,
-	count: u8,
-	target: u8,
+	count: u32,
+	target: u32,
 }
 
 impl<I> Stutter<I>
@@ -29,7 +29,7 @@ where
 	/// assert_eq!(Some(&2), stuttering.next());
 	/// assert_eq!(None, stuttering.next());
 	/// ```
-	pub fn new(other: I, repetitions: u8) -> Self {
+	pub fn new(other: I, repetitions: u32) -> Self {
 		Self {
 			inner: other.peekable(),
 			count: 0,

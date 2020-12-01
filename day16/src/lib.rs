@@ -19,8 +19,9 @@ pub fn solve_1() {
 	let output = (0..iterations).fold(signal, |signal, _| {
 		phasing::apply_phase(&signal, &base_pattern)
 	});
+
 	println!(
 		"After 100 iterations, the signal starts with {:?}.",
-		output.iter().take(8)
+		&output[..8]
 	);
 }
