@@ -67,6 +67,12 @@ pub fn apply_phase(signal: &[u8]) -> Vec<u8> {
 
 pub fn apply_phase_to_looong_signal(signal: &[u8], signal_repetitions: usize) -> Vec<u8> {
 	// TODO move the optimization out here
+	// Oh lord
+	// This computes a ~320_000 digit signal on the first run, and optimizes it alright
+	// It then returns that long-ass signal
+	// And takes a request for a 3_200_000_000 digit signal
+	// and so on
+	// This is completely fucked, and my optimization above does jack shit.
 	(0..signal.len() * signal_repetitions)
 		.map(|i| apply_pattern(i, signal, signal_repetitions))
 		.collect()
