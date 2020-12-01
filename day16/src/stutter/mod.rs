@@ -1,6 +1,11 @@
 use std::iter::Peekable;
 
-pub struct Stutter<I: Iterator + Sized> {
+#[derive(Clone)]
+pub struct Stutter<I>
+where
+    I: Iterator + Sized + Clone,
+    <I as Iterator>::Item: Clone,
+{
     inner: Peekable<I>,
     count: u8,
     target: u8,
@@ -8,7 +13,8 @@ pub struct Stutter<I: Iterator + Sized> {
 
 impl<I> Stutter<I>
 where
-    I: Iterator + Sized,
+    I: Iterator + Sized + Clone,
+    <I as Iterator>::Item: Clone,
 {
     /// Create a new iterator that yields each item <repetition> additional times before advancing.
     /// ```
@@ -34,8 +40,8 @@ where
 
 impl<I> Iterator for Stutter<I>
 where
-    I: Iterator + Sized,
-    <I as std::iter::Iterator>::Item: std::clone::Clone,
+    I: Iterator + Sized + Clone,
+    <I as Iterator>::Item: Clone,
 {
     type Item = <I as Iterator>::Item;
 
