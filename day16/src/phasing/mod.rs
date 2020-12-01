@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use num::integer as num;
 use std::convert::TryFrom;
 
 enum Alternate {
@@ -6,27 +7,53 @@ enum Alternate {
 	Negative,
 }
 
+fn alternating_sum((sign, acc): (Alternate, i32), num: i32) -> (Alternate, i32) {
+	match sign {
+		Alternate::Positive => (Alternate::Negative, acc + num),
+		Alternate::Negative => (Alternate::Positive, acc - num),
+	}
+}
+
 pub fn apply_pattern(dilation: usize, signal: &[u8], signal_repetitions: usize) -> u8 {
+	let phase_len = 1 + dilation;
+	let total_phase_len = 4 * phase_len;
+	let total_signal_len = signal_repetitions * signal.len();
+	let matches_repeat_after = num::lcm(total_phase_len, signal.len());
+	let matches_in_repetition = matches_repeat_after / total_phase_len;
+	let factor = i32::try_from(total_signal_len / matches_repeat_after).unwrap();
+
+	let optimize = total_signal_len > matches_repeat_after + dilation;
+
+	let len_taken = if optimize {
+		// skipped offset + main repeating batch + leftover at the back
+		dilation + matches_repeat_after + (total_signal_len % matches_repeat_after)
+	} else {
+		total_signal_len
+	};
+
 	(signal
 		.iter()
+		.cycle()
+		.take(len_taken)
 		// Our pattern is 0^n+1, 1^n+1, 0^n+1, -1^n+1
 		// We're supposed to skip the first 0
 		// But we don't care about computing the next n 0s either.
 		.skip(dilation)
 		.map(|u| i32::try_from(*u).unwrap())
-		// Split into chunks of n+1 digits each
 		// These chunks align with the repeating pattern of 1, 0, -1, 0, ...
-		.chunks(dilation + 1)
+		.chunks(phase_len)
 		.into_iter()
 		// Skip every second chunk, because it is 0
 		.step_by(2)
-		.fold(
-			(Alternate::Positive, 0_i32),
-			|(sign, acc), elem| match sign {
-				Alternate::Positive => (Alternate::Negative, acc + elem.sum::<i32>()),
-				Alternate::Negative => (Alternate::Positive, acc - elem.sum::<i32>()),
-			},
-		)
+		.enumerate()
+		.map(|(idx, chunk)| {
+			if optimize && idx < matches_in_repetition {
+				chunk.sum::<i32>() * factor
+			} else {
+				chunk.sum()
+			}
+		})
+		.fold((Alternate::Positive, 0), alternating_sum)
 		.1
 		.abs() % 10) as u8
 }
@@ -38,7 +65,8 @@ pub fn apply_phase(signal: &[u8]) -> Vec<u8> {
 }
 
 pub fn apply_phase_to_looong_signal(signal: &[u8], signal_repetitions: usize) -> Vec<u8> {
-	(0..signal.len())
+	// TODO move the optimization out here
+	(0..signal.len() * signal_repetitions)
 		.map(|i| apply_pattern(i, signal, signal_repetitions))
 		.collect()
 }

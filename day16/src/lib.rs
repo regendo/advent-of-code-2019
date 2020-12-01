@@ -23,6 +23,15 @@ pub fn solve_1() {
 }
 
 pub fn solve_2() {
-	let _signal = str_to_digits(include_str!("input.txt"));
-	let _iterations = 100;
+	let signal = str_to_digits(include_str!("input.txt"));
+	let iterations = 100;
+
+	let output = (0..iterations).fold(signal, |signal, _| {
+		phasing::apply_phase_to_looong_signal(&signal, 10_000)
+	});
+
+	println!(
+		"After 100 iterations, the signal starts with {:?}.",
+		&output[..8]
+	);
 }
