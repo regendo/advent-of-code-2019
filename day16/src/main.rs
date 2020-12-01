@@ -1,3 +1,5 @@
+use day16 as lib;
+
 fn main() {
-    println!("Hello, world!");
+	lib::solve_1();
 }
