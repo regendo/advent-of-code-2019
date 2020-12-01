@@ -6,17 +6,17 @@ enum Alternate {
 	Negative,
 }
 
-pub fn apply_pattern(number: usize, signal: &[u8]) -> u8 {
+pub fn apply_pattern(dilation: usize, signal: &[u8], signal_repetitions: usize) -> u8 {
 	(signal
 		.iter()
 		// Our pattern is 0^n+1, 1^n+1, 0^n+1, -1^n+1
 		// We're supposed to skip the first 0
 		// But we don't care about computing the next n 0s either.
-		.skip(number)
+		.skip(dilation)
 		.map(|u| i32::try_from(*u).unwrap())
 		// Split into chunks of n+1 digits each
 		// These chunks align with the repeating pattern of 1, 0, -1, 0, ...
-		.chunks(number + 1)
+		.chunks(dilation + 1)
 		.into_iter()
 		// Skip every second chunk, because it is 0
 		.step_by(2)
@@ -33,7 +33,13 @@ pub fn apply_pattern(number: usize, signal: &[u8]) -> u8 {
 
 pub fn apply_phase(signal: &[u8]) -> Vec<u8> {
 	(0..signal.len())
-		.map(|i| apply_pattern(i, signal))
+		.map(|i| apply_pattern(i, signal, 1))
+		.collect()
+}
+
+pub fn apply_phase_to_looong_signal(signal: &[u8], signal_repetitions: usize) -> Vec<u8> {
+	(0..signal.len())
+		.map(|i| apply_pattern(i, signal, signal_repetitions))
 		.collect()
 }
 
@@ -45,7 +51,7 @@ mod tests {
 	fn example_1_single_pattern() {
 		let signal = vec![1, 2, 3, 4, 5, 6, 7, 8];
 
-		assert_eq!(4, apply_pattern(0, &signal));
+		assert_eq!(4, apply_pattern(0, &signal, 1));
 	}
 
 	#[test]
@@ -92,19 +98,15 @@ mod tests {
 
 		let test = move |source: &str, expected: &str| {
 			let signal = crate::str_to_digits(source);
-			let repeated: Vec<u8> = signal
-				.iter()
-				.cycle()
-				.take(source.len() * 10_000)
-				.map(|v| *v)
-				.collect();
 			let expected = crate::str_to_digits(expected);
 
 			let offset: usize = (0..digits_in_offset).fold(0_usize, |acc, index| {
 				acc * 10 + usize::try_from(*signal.get(index).unwrap()).unwrap()
 			});
 
-			let computed = (0..iterations).fold(repeated, |signal, _| apply_phase(&*signal));
+			let computed = (0..iterations).fold(signal, |signal, _| {
+				apply_phase_to_looong_signal(&*signal, 10_000)
+			});
 			assert_eq!(expected, computed[offset..offset + 8]);
 		};
 
