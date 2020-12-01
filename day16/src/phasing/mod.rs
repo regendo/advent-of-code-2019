@@ -47,7 +47,8 @@ pub fn apply_pattern(dilation: usize, signal: &[u8], signal_repetitions: usize) 
 		.step_by(2)
 		.enumerate()
 		.map(|(idx, chunk)| {
-			if optimize && idx < matches_in_repetition {
+			// times two because we've got two chunks per repitition
+			if optimize && idx < 2 * matches_in_repetition {
 				chunk.sum::<i32>() * factor
 			} else {
 				chunk.sum()
