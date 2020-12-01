@@ -1,19 +1,39 @@
-use crate::stutter;
+use itertools::Itertools;
 use std::convert::TryFrom;
 
-pub fn apply_pattern(number: u32, signal: &[u8], pattern: &[i8]) -> u8 {
-	(stutter::Stutter::new(pattern.iter().cycle(), number)
-		.skip(1)
-		.zip(signal.iter().cycle())
-		.take(signal.len())
-		.map(|(a, b)| i32::try_from(a * i8::try_from(*b).unwrap()).unwrap())
-		.sum::<i32>()
+enum Alternate {
+	Positive,
+	Negative,
+}
+
+pub fn apply_pattern(number: usize, signal: &[u8]) -> u8 {
+	(signal
+		.iter()
+		// Our pattern is 0^n+1, 1^n+1, 0^n+1, -1^n+1
+		// We're supposed to skip the first 0
+		// But we don't care about computing the next n 0s either.
+		.skip(number)
+		.map(|u| i32::try_from(*u).unwrap())
+		// Split into chunks of n+1 digits each
+		// These chunks align with the repeating pattern of 1, 0, -1, 0, ...
+		.chunks(number + 1)
+		.into_iter()
+		// Skip every second chunk, because it is 0
+		.step_by(2)
+		.fold(
+			(Alternate::Positive, 0_i32),
+			|(sign, acc), elem| match sign {
+				Alternate::Positive => (Alternate::Negative, acc + elem.sum::<i32>()),
+				Alternate::Negative => (Alternate::Positive, acc - elem.sum::<i32>()),
+			},
+		)
+		.1
 		.abs() % 10) as u8
 }
 
-pub fn apply_phase(signal: &[u8], pattern: &[i8]) -> Vec<u8> {
+pub fn apply_phase(signal: &[u8]) -> Vec<u8> {
 	(0..signal.len())
-		.map(|i| apply_pattern(u32::try_from(i).unwrap(), signal, pattern))
+		.map(|i| apply_pattern(i, signal))
 		.collect()
 }
 
@@ -24,42 +44,38 @@ mod tests {
 	#[test]
 	fn example_1_single_pattern() {
 		let signal = vec![1, 2, 3, 4, 5, 6, 7, 8];
-		let phase = vec![0, 1, 0, -1];
 
-		assert_eq!(4, apply_pattern(0, &signal, &phase));
+		assert_eq!(4, apply_pattern(0, &signal));
 	}
 
 	#[test]
 	fn example_1_single_phase() {
 		let signal = vec![1, 2, 3, 4, 5, 6, 7, 8];
-		let phase = vec![0, 1, 0, -1];
 		let expected = vec![4, 8, 2, 2, 6, 1, 5, 8];
 
-		assert_eq!(expected, apply_phase(&signal, &phase));
+		assert_eq!(expected, apply_phase(&signal));
 	}
 
 	#[test]
 	fn example_1_full() {
 		let signal = vec![1, 2, 3, 4, 5, 6, 7, 8];
-		let phase = vec![0, 1, 0, -1];
 		let expected = vec![0, 1, 0, 2, 9, 4, 9, 8];
 
-		let actual = (0..4).fold(signal, |signal, _| apply_phase(&signal, &phase));
+		let actual = (0..4).fold(signal, |signal, _| apply_phase(&signal));
 
 		assert_eq!(expected, actual);
 	}
 
 	#[test]
 	fn example_2() {
-		let phase = vec![0, 1, 0, -1];
 		let iterations = 100;
 
 		let test = move |input: &str, expected: &str| {
 			assert_eq!(
 				crate::str_to_digits(expected),
-				(0..iterations).fold(crate::str_to_digits(input), |signal, _| apply_phase(
-					&signal, &phase
-				))[..8]
+				(0..iterations).fold(crate::str_to_digits(input), |signal, _| {
+					apply_phase(&signal)
+				})[..8]
 			)
 		};
 
@@ -71,7 +87,6 @@ mod tests {
 	#[ignore]
 	#[test]
 	fn example_3() {
-		let phase = vec![0, 1, 0, -1];
 		let iterations = 100;
 		let digits_in_offset = 7;
 
@@ -89,7 +104,7 @@ mod tests {
 				acc * 10 + usize::try_from(*signal.get(index).unwrap()).unwrap()
 			});
 
-			let computed = (0..iterations).fold(repeated, |signal, _| apply_phase(&*signal, &phase));
+			let computed = (0..iterations).fold(repeated, |signal, _| apply_phase(&*signal));
 			assert_eq!(expected, computed[offset..offset + 8]);
 		};
 

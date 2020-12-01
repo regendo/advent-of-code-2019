@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 mod phasing;
-pub mod stutter;
 
 pub(crate) fn str_to_digits(input: &str) -> Vec<u8> {
 	input
@@ -13,12 +12,9 @@ pub(crate) fn str_to_digits(input: &str) -> Vec<u8> {
 
 pub fn solve_1() {
 	let signal = str_to_digits(include_str!("input.txt"));
-	let base_pattern = vec![0, 1, 0, -1];
 	let iterations = 100;
 
-	let output = (0..iterations).fold(signal, |signal, _| {
-		phasing::apply_phase(&signal, &base_pattern)
-	});
+	let output = (0..iterations).fold(signal, |signal, _| phasing::apply_phase(&signal));
 
 	println!(
 		"After 100 iterations, the signal starts with {:?}.",
@@ -27,7 +23,6 @@ pub fn solve_1() {
 }
 
 pub fn solve_2() {
-	let signal = str_to_digits(include_str!("input.txt"));
-	let base_pattern = vec![0, 1, 0, -1];
-	let iterations = 100;
+	let _signal = str_to_digits(include_str!("input.txt"));
+	let _iterations = 100;
 }
