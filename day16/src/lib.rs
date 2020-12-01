@@ -25,3 +25,9 @@ pub fn solve_1() {
 		&output[..8]
 	);
 }
+
+pub fn solve_2() {
+	let signal = str_to_digits(include_str!("input.txt"));
+	let base_pattern = vec![0, 1, 0, -1];
+	let iterations = 100;
+}

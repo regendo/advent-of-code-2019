@@ -67,4 +67,34 @@ mod tests {
 		test("19617804207202209144916044189917", "73745418");
 		test("69317163492948606335995924319873", "52432133");
 	}
+
+	#[ignore]
+	#[test]
+	fn example_3() {
+		let phase = vec![0, 1, 0, -1];
+		let iterations = 100;
+		let digits_in_offset = 7;
+
+		let test = move |source: &str, expected: &str| {
+			let signal = crate::str_to_digits(source);
+			let repeated: Vec<u8> = signal
+				.iter()
+				.cycle()
+				.take(source.len() * 10_000)
+				.map(|v| *v)
+				.collect();
+			let expected = crate::str_to_digits(expected);
+
+			let offset: usize = (0..digits_in_offset).fold(0_usize, |acc, index| {
+				acc * 10 + usize::try_from(*signal.get(index).unwrap()).unwrap()
+			});
+
+			let computed = (0..iterations).fold(repeated, |signal, _| apply_phase(&*signal, &phase));
+			assert_eq!(expected, computed[offset..offset + 8]);
+		};
+
+		test("03036732577212944063491565474664", "84462026");
+		test("02935109699940807407585447034323", "78725270");
+		test("03081770884921959731165446850517", "53553731");
+	}
 }
